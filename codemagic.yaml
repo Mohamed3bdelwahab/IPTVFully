@@ -1,0 +1,31 @@
+workflows:
+  android-workflow:
+    name: Android Build
+    environment:
+      vars:
+        PACKAGE_NAME: "com.example.iptvtv"
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      android_signing:
+        - keystore_reference
+      groups:
+        - google_play
+      vars:
+        CM_KEYSTORE_PATH: /tmp/keystore.keystore
+        CM_KEY_ALIAS: ${{ secrets.CM_KEY_ALIAS }}
+        CM_KEY_PASSWORD: ${{ secrets.CM_KEY_PASSWORD }}
+        CM_STORE_PASSWORD: ${{ secrets.CM_STORE_PASSWORD }}
+    scripts:
+      - name: Set up code signing settings on Android
+        script: |
+          keytool -genkey -v -keystore $CM_KEYSTORE_PATH -keyalg RSA -keysize 2048 -validity 10000 -alias $CM_KEY_ALIAS -storepass $CM_STORE_PASSWORD -keypass $CM_KEY_PASSWORD -dname "CN=Android Debug,O=Android,C=US"
+          cd android && ./gradlew assembleRelease
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/mapping.txt
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - dev@example.com

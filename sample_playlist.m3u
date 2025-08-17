@@ -1,0 +1,21 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="bbcnews" tvg-name="BBC News" tvg-logo="https://example.com/bbc.png" group-title="News",BBC News
+http://example.com/bbc.m3u8
+
+#EXTINF:-1 tvg-id="cnn" tvg-name="CNN" tvg-logo="https://example.com/cnn.png" group-title="News",CNN
+http://example.com/cnn.m3u8
+
+#EXTINF:-1 tvg-id="espn" tvg-name="ESPN" tvg-logo="https://example.com/espn.png" group-title="Sports",ESPN
+http://example.com/espn.m3u8
+
+#EXTINF:-1 tvg-id="discovery" tvg-name="Discovery" tvg-logo="https://example.com/discovery.png" group-title="Documentary",Discovery Channel
+http://example.com/discovery.m3u8
+
+#EXTINF:-1 tvg-id="natgeo" tvg-name="National Geographic" tvg-logo="https://example.com/natgeo.png" group-title="Documentary",National Geographic
+http://example.com/natgeo.m3u8
+
+#EXTINF:-1 tvg-id="hbo" tvg-name="HBO" tvg-logo="https://example.com/hbo.png" group-title="Entertainment",HBO
+http://example.com/hbo.m3u8
+
+#EXTINF:-1 tvg-id="netflix" tvg-name="Netflix" tvg-logo="https://example.com/netflix.png" group-title="Entertainment",Netflix
+http://example.com/netflix.m3u8

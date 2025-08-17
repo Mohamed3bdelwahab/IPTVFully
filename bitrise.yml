@@ -1,0 +1,61 @@
+format_version: '11'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+app:
+  envs:
+  - GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.configureondemand=true -Dorg.gradle.jvmargs="-Xmx3072m -XX:MaxPermSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
+
+workflows:
+  primary:
+    steps:
+    - activate-ssh-key@4:
+        run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+
+    - git-clone@4: {}
+
+    - cache-pull@2: {}
+
+    - install-missing-android-tools@3:
+        inputs:
+        - gradlew_path: "$PROJECT_LOCATION/gradlew"
+
+    - android-lint@0:
+        inputs:
+        - project_location: "$PROJECT_LOCATION"
+        - variant: "debug"
+
+    - android-unit-test@1:
+        inputs:
+        - project_location: "$PROJECT_LOCATION"
+        - variant: "debug"
+
+    - android-build@1:
+        inputs:
+        - project_location: "$PROJECT_LOCATION"
+        - variant: "debug"
+
+    - deploy-to-bitrise-io@2: {}
+
+    - cache-push@2: {}
+
+  deploy:
+    steps:
+    - activate-ssh-key@4:
+        run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+
+    - git-clone@4: {}
+
+    - cache-pull@2: {}
+
+    - install-missing-android-tools@3:
+        inputs:
+        - gradlew_path: "$PROJECT_LOCATION/gradlew"
+
+    - android-build@1:
+        inputs:
+        - project_location: "$PROJECT_LOCATION"
+        - variant: "release"
+
+    - deploy-to-bitrise-io@2: {}
+
+    - cache-push@2: {}
