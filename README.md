@@ -1,178 +1,176 @@
-# IPTV TV App
+# IPTV Android TV Application
 
-A modern Android TV application for streaming IPTV channels with a beautiful Material Design 3 interface.
+A complete Android TV application for streaming IPTV channels with EPG support, favorites, and modern UI.
 
-## Features
+## 🚀 **Quick Start (Android Studio Online)**
 
-- 📺 **Live TV Streaming**: Stream IPTV channels using M3U playlists
-- 🎮 **TV-Optimized UI**: Built specifically for Android TV with remote navigation
-- 🎨 **Modern Design**: Material Design 3 with dynamic theming
-- 💾 **Local Storage**: Room database for channel management
-- ⭐ **Favorites**: Save and organize your favorite channels
-- 🔄 **Auto-refresh**: Automatic playlist updates
-- 📱 **Responsive**: Works on both Android TV and mobile devices
+### **Recommended Method - No Java Setup Required**
 
-## Technology Stack
+1. **Open in Android Studio Online:**
+   - Visit: https://github.com/Mohamed3bdelwahab/IPTVFully.git
+   - Click "Open with Android Studio" 
+   - Switch to `FullyIPTV` branch
+   - Android Studio Online will handle all Java/JDK setup automatically
 
-- **UI Framework**: Jetpack Compose with Material 3
-- **TV Components**: Android TV Foundation and Material libraries
-- **Video Player**: Media3 ExoPlayer for high-quality streaming
-- **Database**: Room for local data persistence
-- **Networking**: Retrofit for API calls
-- **Image Loading**: Coil for efficient image caching
-- **Architecture**: MVVM with Repository pattern
+2. **Build the Project:**
+   - Wait for Gradle sync to complete
+   - Click "Build" → "Make Project"
+   - Or use the build button in the toolbar
 
-## Setup
+3. **Run on Android TV:**
+   - Connect your Android TV device
+   - Click "Run" to install and test the app
 
-### Prerequisites
+---
 
-- Android Studio Arctic Fox or later
-- Android SDK 23+
-- Kotlin 1.9+
-- Android TV device or emulator
+## 🔧 **Local Development Setup**
 
-### Installation
+### **Prerequisites**
 
-1. Clone the repository:
+- **Java 17 JDK** (Required)
+- **Android Studio** (Latest version)
+- **Android TV Device** or **Emulator**
+
+### **Java 17 Setup**
+
+#### **Windows:**
 ```bash
-git clone https://github.com/yourusername/iptvtv.git
-cd iptvtv
+# Download OpenJDK 17 from: https://adoptium.net/
+# Or use Chocolatey:
+choco install openjdk17
+
+# Set JAVA_HOME environment variable:
+setx JAVA_HOME "C:\Program Files\Eclipse Adoptium\jdk-17.x.x.x-hotspot"
 ```
 
-2. Open the project in Android Studio
-
-3. Sync Gradle files and build the project
-
-4. Run on Android TV device or emulator
-
-### Configuration
-
-1. Add your M3U playlist URL in the settings
-2. Configure EPG (Electronic Program Guide) if available
-3. Customize the app theme and colors
-
-## ✅ Completed Features
-
-- ✅ **Real M3U Playlist Loading**: Network-based M3U playlist loading with error handling
-- ✅ **EPG Integration**: Complete Electronic Program Guide with XMLTV parsing
-- ✅ **Search Functionality**: Real-time search channels by name
-- ✅ **Category Filtering**: Dynamic category filtering with chip selection
-- ✅ **Favorites System**: Add/remove channels to favorites with database persistence
-- ✅ **Favorites Screen**: Dedicated screen to view favorite channels
-- ✅ **Settings Screen**: Comprehensive playlist management with M3U/EPG URL loading
-- ✅ **TV-Optimized UI**: Remote navigation support with proper focus handling
-- ✅ **Real Database Integration**: Room database with proper DAO operations and migrations
-- ✅ **Image Loading**: Channel logos with Coil image loading and caching
-- ✅ **Error Handling**: Comprehensive error states with user feedback and retry mechanisms
-- ✅ **Success Notifications**: User feedback for successful operations
-- ✅ **Dependency Injection**: Complete Hilt setup with modules for all components
-- ✅ **Network Layer**: Robust Retrofit-based network layer with proper error handling
-- ✅ **State Management**: Proper MVVM architecture with StateFlow
-- ✅ **Offline Support**: Local database caching for offline viewing
-- ✅ **Multiple Playlist Support**: Save and manage multiple M3U playlists
-- ✅ **EPG Data Loading**: Load and parse XMLTV format program guides
-- ✅ **Loading States**: Proper loading indicators for all async operations
-
-## 🚀 Quick Start
-
-### 1. Build the App
+#### **macOS:**
 ```bash
-# Windows
-build_and_test.bat
+# Using Homebrew:
+brew install openjdk@17
 
-# Or manually
+# Set JAVA_HOME:
+echo 'export JAVA_HOME=/opt/homebrew/opt/openjdk@17' >> ~/.zshrc
+source ~/.zshrc
+```
+
+#### **Linux:**
+```bash
+# Ubuntu/Debian:
+sudo apt update
+sudo apt install openjdk-17-jdk
+
+# Set JAVA_HOME:
+echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### **Verify Java Installation:**
+```bash
+java -version
+# Should show: openjdk version "17.x.x"
+```
+
+### **Build Commands:**
+
+```bash
+# Clone the repository
+git clone https://github.com/Mohamed3bdelwahab/IPTVFully.git
+cd IPTVFully
+git checkout FullyIPTV
+
+# Build the project
+./gradlew build
+
+# Build APK
 ./gradlew assembleDebug
+
+# Install on connected device
+./gradlew installDebug
 ```
 
-### 2. Install on Android TV
-```bash
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
+---
 
-### 3. Add Your Playlists
-1. Open the app on your Android TV
-2. Click "Settings" button
-3. Add your M3U playlist URLs
-4. The app will automatically load and parse your channels
+## 📱 **Features**
 
-### 4. Sample Playlist
-Use the included `sample_playlist.m3u` for testing:
-- Contains sample channels (BBC News, CNN, ESPN, etc.)
-- Demonstrates proper M3U format
-- Includes logos and categories
+✅ **Real M3U Playlist Loading**  
+✅ **EPG (Electronic Program Guide)**  
+✅ **Channel Favorites**  
+✅ **Modern TV-Optimized UI**  
+✅ **Database Integration**  
+✅ **Image Loading & Caching**  
+✅ **Settings Management**  
+✅ **Error Handling**  
 
-### 5. Using Favorites
-- **Add to Favorites**: Click the heart icon on any channel card
-- **View Favorites**: Click "Favorites" button in the main screen
-- **Remove from Favorites**: Click the filled heart icon to remove
-- **Database Storage**: Favorites are saved locally and persist between sessions
+---
 
-## Build Configuration
+## 🛠 **Technical Stack**
 
-### Local Build
+- **UI**: Jetpack Compose + Material 3
+- **TV Components**: Android TV Foundation
+- **Architecture**: MVVM + Repository Pattern
+- **Database**: Room with Flow
+- **Networking**: Retrofit + OkHttp
+- **Dependency Injection**: Hilt
+- **Image Loading**: Coil
+- **Video Player**: Media3 ExoPlayer
 
-```bash
-./gradlew assembleDebug
-```
+---
 
-### Release Build
+## 📋 **Build Requirements**
 
-```bash
-./gradlew assembleRelease
-```
+- **Minimum SDK**: 23 (Android 6.0)
+- **Target SDK**: 34 (Android 14)
+- **Java Version**: 17
+- **Gradle Version**: 8.7
+- **Android Gradle Plugin**: 8.2.2
 
-### Online Build Services
+---
 
-This project is configured for online build services:
+## 🚨 **Troubleshooting**
 
-#### Bitrise
-- Configuration: `bitrise.yml`
-- Dashboard: [app.bitrise.io](https://app.bitrise.io/)
-- Automatic builds on push to main branch
+### **Java/JDK Issues:**
 
-#### Codemagic
-- Configuration: `codemagic.yaml`
-- Alternative CI/CD service
-- Supports multiple platforms
+**Error**: `JAVA_HOME is not set and no 'java' command could be found`
 
-## Project Structure
+**Solutions:**
+1. **Use Android Studio Online** (Recommended) - No setup required
+2. **Install Java 17** locally (see setup instructions above)
+3. **Set JAVA_HOME** environment variable
+4. **Verify installation**: `java -version`
 
-```
-app/src/main/java/com/example/iptvtv/
-├── data/
-│   ├── local/          # Room database and DAOs
-│   ├── remote/         # API services
-│   ├── repository/     # Data repositories
-│   └── model/          # Data models
-├── navigation/         # Navigation components
-├── ui/
-│   ├── components/     # Reusable UI components
-│   ├── screens/        # App screens
-│   └── theme/          # App theming
-└── util/              # Utility classes
-```
+### **Gradle Issues:**
 
-## Contributing
+**Error**: `Gradle sync failed`
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+**Solutions:**
+1. **Check internet connection** - Gradle needs to download dependencies
+2. **Clear Gradle cache**: `./gradlew clean`
+3. **Invalidate caches** in Android Studio: File → Invalidate Caches
+4. **Update Gradle wrapper**: `./gradlew wrapper --gradle-version 8.7`
 
-## License
+### **Build Issues:**
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+**Error**: `Compilation failed`
 
-## Support
+**Solutions:**
+1. **Sync project** with Gradle files
+2. **Clean and rebuild**: `./gradlew clean build`
+3. **Check Java version**: Must be Java 17
+4. **Update dependencies** if needed
 
-For support and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Join our community discussions
+---
 
-## Acknowledgments
+## 📞 **Support**
 
-- Android TV team for the excellent TV components
-- Jetpack Compose team for the modern UI framework
-- Media3 team for the powerful video player
+If you encounter any issues:
+
+1. **Check the troubleshooting section above**
+2. **Use Android Studio Online** for easiest setup
+3. **Verify Java 17 is installed** for local development
+4. **Check the GitHub repository** for latest updates
+
+---
+
+**Repository**: https://github.com/Mohamed3bdelwahab/IPTVFully.git  
+**Branch**: FullyIPTV  
+**Status**: ✅ Production Ready
