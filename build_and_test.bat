@@ -8,13 +8,27 @@ REM Check if Java is installed
 echo Checking Java installation...
 java -version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ERROR: Java is not installed or not in PATH
-    echo.
-    echo Please install Java 17 JDK from: https://adoptium.net/
-    echo Or use Android Studio Online for easier setup
-    echo.
-    pause
-    exit /b 1
+    echo Java not found in PATH. Checking for portable Java...
+    
+    REM Check for portable Java in user directory
+    set "PORTABLE_JAVA=%USERPROFILE%\portable-java"
+    if exist "%PORTABLE_JAVA%\jdk-17.0.9+9\bin\java.exe" (
+        echo Found portable Java installation!
+        set "JAVA_HOME=%PORTABLE_JAVA%\jdk-17.0.9+9"
+        set "PATH=%JAVA_HOME%\bin;%PATH%"
+        echo Using portable Java from: %JAVA_HOME%
+    ) else (
+        echo ERROR: Java is not installed or not in PATH
+        echo.
+        echo Solutions:
+        echo 1. Run INSTALL_JAVA_PORTABLE.bat to install portable Java (no admin required)
+        echo 2. Run install-java-user.ps1 for PowerShell installation
+        echo 3. Use Android Studio Online (recommended) - no setup required
+        echo 4. Install Java 17 JDK from: https://adoptium.net/
+        echo.
+        pause
+        exit /b 1
+    )
 )
 
 REM Check Java version
