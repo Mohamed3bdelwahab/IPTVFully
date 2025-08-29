@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/speed_compact_background"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:layout_margin="16dp">
+
+    <!-- Speed Down Button -->
+    <Button
+        android:id="@+id/btnSpeedDown"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:text="-"
+        android:textSize="18sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/speed_button_background"
+        android:layout_marginEnd="8dp"
+        android:focusable="true"
+        android:clickable="true" />
+
+    <!-- Current Speed Display -->
+    <TextView
+        android:id="@+id/tvCurrentSpeed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="1.0x"
+        android:textSize="20sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_marginHorizontal="8dp"
+        android:minWidth="60dp"
+        android:gravity="center" />
+
+    <!-- Speed Up Button -->
+    <Button
+        android:id="@+id/btnSpeedUp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:text="+"
+        android:textSize="18sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/speed_button_background"
+        android:layout_marginStart="8dp"
+        android:focusable="true"
+        android:clickable="true" />
+
+</LinearLayout>
