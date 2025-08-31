@@ -63,7 +63,7 @@ class TVRemoteHandler(
         }
         
         // If playlist menu is visible, handle it first
-        if (playlistOverlayMenu?.isVisible == true) {
+        if (playlistOverlayMenu?.isMenuVisible() == true) {
             return playlistOverlayMenu?.handleKeyEvent(keyEvent) ?: false
         }
         

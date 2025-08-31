@@ -34,6 +34,7 @@ class PlaylistOverlayMenu(
     private var overlayView: View? = null
     private var episodesAdapter: EpisodesAdapter? = null
     private var isVisible = false
+    private var currentFocusIndex = 0
     
     private val handler = Handler(Looper.getMainLooper())
     private val autoHideRunnable = Runnable { hide() }
@@ -63,8 +64,7 @@ class PlaylistOverlayMenu(
                 width = 350 // Smaller width for compact menu
                 height = 400 // Smaller height for compact menu
                 type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                 format = PixelFormat.TRANSLUCENT
                 gravity = Gravity.TOP or Gravity.END // Top right corner
@@ -153,6 +153,17 @@ class PlaylistOverlayMenu(
             episodesRecyclerView.adapter = episodesAdapter
             episodesAdapter?.updateEpisodes(episodes)
             
+            // Set initial focus to current episode
+            currentFocusIndex = currentEpisodeIndex.coerceIn(0, episodes.size - 1)
+            android.util.Log.d("PlaylistOverlayMenu", "Initial focus index: $currentFocusIndex")
+            
+            // Set focus to the current episode
+            episodesRecyclerView.post {
+                val viewHolder = episodesRecyclerView.findViewHolderForAdapterPosition(currentFocusIndex)
+                viewHolder?.itemView?.requestFocus()
+                android.util.Log.d("PlaylistOverlayMenu", "Set focus to episode at index: $currentFocusIndex")
+            }
+            
             // Highlight current episode
             highlightCurrentEpisode()
             
@@ -162,6 +173,11 @@ class PlaylistOverlayMenu(
             view.requestFocus()
         }
     }
+    
+    /**
+     * Check if menu is visible
+     */
+    fun isMenuVisible(): Boolean = isVisible
     
     /**
      * Handle key events for the overlay - called from VideoPlayerActivity
@@ -177,19 +193,26 @@ class PlaylistOverlayMenu(
         
         return when (keyEvent.keyCode) {
             // Navigation within playlist
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                android.util.Log.d("PlaylistOverlayMenu", "D-pad navigation in playlist")
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                android.util.Log.d("PlaylistOverlayMenu", "D-pad UP pressed - navigating up")
+                navigateUp()
                 scheduleAutoHide()
-                false // Let RecyclerView handle navigation
+                true // Consume the event
+            }
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                android.util.Log.d("PlaylistOverlayMenu", "D-pad DOWN pressed - navigating down")
+                navigateDown()
+                scheduleAutoHide()
+                true // Consume the event
             }
             
             // Episode selection
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_DPAD_CENTER -> {
                 android.util.Log.d("PlaylistOverlayMenu", "Enter/Center pressed - episode selection")
+                selectCurrentEpisode()
                 scheduleAutoHide()
-                false // Let RecyclerView handle selection
+                true // Consume the event
             }
             
             // Close menu only on back button
@@ -214,6 +237,42 @@ class PlaylistOverlayMenu(
         if (currentEpisodeIndex >= 0 && currentEpisodeIndex < episodes.size) {
             android.util.Log.d("PlaylistOverlayMenu", "Highlighting current episode at index: $currentEpisodeIndex")
             // The adapter will handle highlighting the current episode
+        }
+    }
+    
+    private fun navigateUp() {
+        if (currentFocusIndex > 0) {
+            currentFocusIndex--
+            updateFocus()
+            android.util.Log.d("PlaylistOverlayMenu", "Navigated UP to index: $currentFocusIndex")
+        }
+    }
+    
+    private fun navigateDown() {
+        if (currentFocusIndex < episodes.size - 1) {
+            currentFocusIndex++
+            updateFocus()
+            android.util.Log.d("PlaylistOverlayMenu", "Navigated DOWN to index: $currentFocusIndex")
+        }
+    }
+    
+    private fun updateFocus() {
+        overlayView?.let { view ->
+            val episodesRecyclerView = view.findViewById<RecyclerView>(R.id.rvEpisodesList)
+            episodesRecyclerView.post {
+                val viewHolder = episodesRecyclerView.findViewHolderForAdapterPosition(currentFocusIndex)
+                viewHolder?.itemView?.requestFocus()
+                android.util.Log.d("PlaylistOverlayMenu", "Updated focus to episode at index: $currentFocusIndex")
+            }
+        }
+    }
+    
+    private fun selectCurrentEpisode() {
+        if (currentFocusIndex in episodes.indices) {
+            val episode = episodes[currentFocusIndex]
+            android.util.Log.d("PlaylistOverlayMenu", "Selecting episode: ${episode.title} at index: $currentFocusIndex")
+            onEpisodeSelected?.invoke(episode, currentFocusIndex)
+            hide()
         }
     }
     

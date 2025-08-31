@@ -647,7 +647,23 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         }
     }
     
-
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // If playlist menu is visible, let it handle DPAD keys
+        if (playlistOverlayMenu?.isMenuVisible() == true) {
+            if (playlistOverlayMenu?.handleKeyEvent(event) == true) {
+                return true
+            }
+        }
+        
+        // If speed menu is visible, let it handle keys
+        if (speedOverlayMenu?.isMenuVisible() == true) {
+            if (speedOverlayMenu?.handleKeyEvent(event) == true) {
+                return true
+            }
+        }
+        
+        return super.dispatchKeyEvent(event)
+    }
     
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
