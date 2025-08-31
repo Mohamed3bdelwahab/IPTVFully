@@ -5,30 +5,7 @@ This document provides comprehensive documentation for the playlist system in th
 
 ---
 
-## 🏗️ **Libraries & Dependencies Used**
-
-### **Core Libraries**
-```kotlin
-// Jetpack Compose
-implementation("androidx.compose.ui:ui:1.6.7")
-implementation("androidx.compose.material3:material3:1.2.1")
-implementation("androidx.compose.material:material-icons-extended:1.6.7")
-
-// Navigation
-implementation("androidx.navigation:navigation-compose:2.7.7")
-
-// Room Database
-implementation("androidx.room:room-runtime:2.6.1")
-implementation("androidx.room:room-ktx:2.6.1")
-kapt("androidx.room:room-compiler:2.6.1")
-
-// Networking
-implementation("com.squareup.retrofit2:retrofit:2.9.0")
-implementation("com.squareup.okhttp3:okhttp:4.12.0")
-implementation("com.squareup.moshi:moshi:1.15.1")
-```
-
----
+#
 
 ## 📋 **Playlist System Architecture**
 

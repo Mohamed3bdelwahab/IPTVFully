@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@color/background_dark">
+
+    <!-- Left Panel - Categories -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="@color/panel_background"
+        android:padding="16dp">
+
+        <!-- Panel Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Categories"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"
+            android:fontFamily="sans-serif-medium" />
+
+        <!-- Category List -->
+        <ListView
+            android:id="@+id/categoryListView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null"
+            android:dividerHeight="8dp"
+            android:scrollbars="none"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </LinearLayout>
+
+    <!-- Right Panel - Series -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Panel Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Series"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"
+            android:fontFamily="sans-serif-medium" />
+
+        <!-- Series Grid -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/seriesRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="none"
+                android:focusable="true"
+                android:focusableInTouchMode="true" />
+
+            <!-- Loading State -->
+            <TextView
+                android:id="@+id/loadingText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Loading series..."
+                android:textSize="18sp"
+                android:textColor="@color/text_secondary"
+                android:visibility="gone" />
+
+            <!-- Error State -->
+            <TextView
+                android:id="@+id/errorText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="No series found"
+                android:textSize="18sp"
+                android:textColor="@color/text_secondary"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+        <!-- Instructions -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="D-Pad Left/Right: Switch panels • D-Pad Up/Down: Navigate • Enter: Select • Back: Return"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:layout_marginTop="16dp"
+            android:fontFamily="sans-serif" />
+
+    </LinearLayout>
+
+</LinearLayout>

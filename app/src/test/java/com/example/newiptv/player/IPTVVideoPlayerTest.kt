@@ -182,7 +182,7 @@ class IPTVVideoPlayerTest {
     }
 
     @Test
-    fun `test setVolume with value above 1.0 should be clamped`() {
+    fun testSetVolumeWithValueAbove1_0ShouldBeClamped() {
         // Given
         val volume = 1.5f
         
@@ -194,7 +194,7 @@ class IPTVVideoPlayerTest {
     }
 
     @Test
-    fun `test setVolume with value below 0.0 should be clamped`() {
+    fun testSetVolumeWithValueBelow0_0ShouldBeClamped() {
         // Given
         val volume = -0.5f
         

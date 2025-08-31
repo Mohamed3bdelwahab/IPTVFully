@@ -33,6 +33,7 @@ class SpeedOverlayMenu(
         private const val MIN_SPEED = 0.25f
         private const val MAX_SPEED = 3.0f
         private const val SPEED_INCREMENT = 0.25f
+        private const val AUTO_HIDE_DELAY = 3000L // 3 seconds
         
         // Speed presets mapping
         private val SPEED_PRESETS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
@@ -42,6 +43,8 @@ class SpeedOverlayMenu(
     private var overlayView: View? = null
     private var currentSpeed: Float = 1.0f
     private var isVisible = false
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val autoHideRunnable = Runnable { hide() }
     
     // UI Components
     private var tvCurrentSpeed: TextView? = null
@@ -65,7 +68,11 @@ class SpeedOverlayMenu(
             addToWindow()
             
             isVisible = true
-            Log.d(TAG, "Speed overlay menu shown")
+            
+            // Schedule auto-hide
+            scheduleAutoHide()
+            
+            Log.d(TAG, "Speed overlay menu shown with speed: ${currentSpeed}x")
             
         } catch (e: Exception) {
             Log.e(TAG, "Error showing speed overlay menu", e)
@@ -79,6 +86,7 @@ class SpeedOverlayMenu(
         if (!isVisible) return
         
         try {
+            cancelAutoHide()
             removeFromWindow()
             isVisible = false
             Log.d(TAG, "Speed overlay menu hidden")
@@ -161,13 +169,18 @@ class SpeedOverlayMenu(
                 true
             }
             
-            // Other keys don't close the menu
+            // Other keys don't close the menu but reset auto-hide timer
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_DPAD_CENTER -> {
                 // Just consume the event, don't close menu
+                scheduleAutoHide()
                 true
             }
             
-            else -> false
+            else -> {
+                // Any other key interaction should reset auto-hide timer
+                scheduleAutoHide()
+                false
+            }
         }
     }
     
@@ -289,11 +302,16 @@ class SpeedOverlayMenu(
         // Apply to ExoPlayer
         exoPlayer?.setPlaybackParameters(PlaybackParameters(speed))
         
-        // Update UI
-        updateSpeedDisplay()
+        // Update UI on main thread
+        handler.post {
+            updateSpeedDisplay()
+        }
         
         // Notify callback
         onSpeedChanged?.invoke(speed)
+        
+        // Auto-hide after speed change
+        scheduleAutoHide()
         
         Log.d(TAG, "Speed changed to: ${speed}x")
     }
@@ -303,6 +321,22 @@ class SpeedOverlayMenu(
      */
     private fun updateSpeedDisplay() {
         tvCurrentSpeed?.text = "${currentSpeed}x"
+        Log.d(TAG, "Updated speed display to: ${currentSpeed}x")
+    }
+    
+    /**
+     * Schedule auto-hide
+     */
+    private fun scheduleAutoHide() {
+        handler.removeCallbacks(autoHideRunnable)
+        handler.postDelayed(autoHideRunnable, AUTO_HIDE_DELAY)
+    }
+    
+    /**
+     * Cancel auto-hide
+     */
+    private fun cancelAutoHide() {
+        handler.removeCallbacks(autoHideRunnable)
     }
     
 
@@ -322,6 +356,7 @@ class SpeedOverlayMenu(
      */
     fun destroy() {
         hide()
+        cancelAutoHide()
         windowManager = null
     }
 }

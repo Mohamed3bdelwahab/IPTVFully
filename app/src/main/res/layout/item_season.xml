@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/seasonCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    android:focusable="true"
+    android:clickable="true"
+    android:focusableInTouchMode="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardUseCompatPadding="true"
+    app:cardCornerRadius="12dp"
+    app:cardBackgroundColor="@null"
+    android:background="@drawable/focusable_season_background">
+
+    <TextView
+        android:id="@+id/seasonText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:text="Season 1"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:gravity="center"
+        android:fontFamily="sans-serif-medium" />
+
+</androidx.cardview.widget.CardView>

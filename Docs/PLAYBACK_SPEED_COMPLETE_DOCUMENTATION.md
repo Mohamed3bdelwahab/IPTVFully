@@ -3,24 +3,7 @@
 ## 📋 **Overview**
 This document provides comprehensive documentation for the playback speed control system in the IPTV Android application, including all speed control methods, code examples, and implementation details.
 
----
 
-## 🏗️ **Libraries & Dependencies Used**
-
-### **Core Media Libraries**
-```kotlin
-// Media3 (ExoPlayer) - Core Video Player
-implementation("androidx.media3:media3-exoplayer:1.3.1")
-implementation("androidx.media3:media3-common:1.3.1")
-implementation("androidx.media3:media3-ui:1.3.1")
-
-// Jetpack Compose
-implementation("androidx.compose.ui:ui:1.6.7")
-implementation("androidx.compose.material3:material3:1.2.1")
-implementation("androidx.compose.material:material-icons-extended:1.6.7")
-```
-
----
 
 ## ⚡ **Speed Control System Architecture**
 

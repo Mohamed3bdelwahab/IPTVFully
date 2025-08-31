@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("kotlin-kapt")
 }
 
 android {
@@ -50,34 +51,34 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     
-    // Modern Video Player Dependencies (ExoPlayer + Media3)
+    // Video Player Dependencies
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-ui:1.2.1")
     implementation("androidx.media3:media3-common:1.2.1")
-    implementation("androidx.media3:media3-session:1.2.1")
     implementation("androidx.media3:media3-datasource:1.2.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.2.1")
-    
-    // Additional video player libraries (using compatible versions)
-    implementation("com.google.android.exoplayer:exoplayer-core:2.18.7")
-    implementation("com.google.android.exoplayer:exoplayer-ui:2.18.7")
-    implementation("com.google.android.exoplayer:exoplayer-dash:2.18.7")
-    implementation("com.google.android.exoplayer:exoplayer-hls:2.18.7")
-    implementation("com.google.android.exoplayer:exoplayer-smoothstreaming:2.18.7")
-    
-    // UI and utility libraries
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-    implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation("androidx.preference:preference-ktx:1.2.1")
     
     // Network libraries
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
+    // Retrofit for API calls
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    
+    // Gson for JSON parsing
+    implementation("com.google.code.gson:gson:2.10.1")
+    
+    // Room Database
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+    
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    
     // Testing
     testImplementation(libs.junit)
-    testImplementation("io.mockk:mockk:1.13.8")
-    testImplementation("org.robolectric:robolectric:4.11.1")
-    testImplementation("androidx.test:core:1.5.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

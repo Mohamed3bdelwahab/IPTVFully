@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background_dark"
+    android:padding="16dp">
+
+    <!-- Series Info Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/panel_background"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
+
+        <!-- Series Title -->
+        <TextView
+            android:id="@+id/seriesTitleView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Series Title"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:layout_marginBottom="8dp"
+            android:fontFamily="sans-serif-medium" />
+
+        <!-- Series Category -->
+        <TextView
+            android:id="@+id/seriesCategoryView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Category"
+            android:textSize="18sp"
+            android:textColor="@color/series_color"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"
+            android:fontFamily="sans-serif" />
+
+        <!-- Series Description -->
+        <TextView
+            android:id="@+id/seriesDescriptionView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Series description goes here..."
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:lineSpacingExtra="4dp"
+            android:fontFamily="sans-serif" />
+
+    </LinearLayout>
+
+    <!-- Dual Panel Layout -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- Left Panel - Seasons -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:background="@color/panel_background"
+            android:padding="16dp"
+            android:layout_marginEnd="8dp">
+
+            <!-- Panel Title -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Seasons"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="sans-serif-medium" />
+
+            <!-- Seasons List -->
+            <ListView
+                android:id="@+id/seasonsListView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:divider="@null"
+                android:dividerHeight="8dp"
+                android:scrollbars="none"
+                android:focusable="true"
+                android:focusableInTouchMode="true" />
+
+        </LinearLayout>
+
+        <!-- Right Panel - Episodes -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:orientation="vertical"
+            android:background="@color/panel_background"
+            android:padding="16dp"
+            android:layout_marginStart="8dp">
+
+            <!-- Panel Title -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Episodes"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="sans-serif-medium" />
+
+            <!-- Episodes List -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/episodesRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scrollbars="none"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <!-- Loading State -->
+                <TextView
+                    android:id="@+id/loadingText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Loading episodes..."
+                    android:textSize="16sp"
+                    android:textColor="@color/text_secondary"
+                    android:visibility="gone" />
+
+                <!-- Error State -->
+                <TextView
+                    android:id="@+id/errorText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="No episodes found"
+                    android:textSize="16sp"
+                    android:textColor="@color/text_secondary"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Instructions -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="D-Pad Left/Right: Switch panels • D-Pad Up/Down: Navigate • Enter: Select • Back: Return"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:gravity="center"
+        android:layout_marginTop="16dp"
+        android:fontFamily="sans-serif" />
+
+</LinearLayout>

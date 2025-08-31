@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background_dark"
+    android:padding="32dp">
+
+    <!-- App Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="NewIPTV V2"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:gravity="center"
+        android:layout_marginBottom="48dp"
+        android:fontFamily="sans-serif-light" />
+
+    <!-- Menu Grid -->
+    <GridLayout
+        android:id="@+id/menuGrid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:columnCount="3"
+        android:rowCount="2"
+        android:alignmentMode="alignMargins"
+        android:useDefaultMargins="false" />
+
+    <!-- Instructions for TV Remote -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Use D-Pad to navigate • Enter to select • Back to exit"
+        android:textSize="16sp"
+        android:textColor="@color/text_secondary"
+        android:gravity="center"
+        android:layout_marginTop="32dp"
+        android:fontFamily="sans-serif" />
+
+</LinearLayout>

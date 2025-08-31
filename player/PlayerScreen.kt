@@ -24,7 +24,6 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private lateinit var binding: ActivityVideoPlayerBinding
     private lateinit var videoPlayer: IPTVVideoPlayer
     private lateinit var tvRemoteHandler: TVRemoteHandler
-    private var speedOverlayMenu: SpeedOverlayMenu? = null
     private var isFullscreen = false
     private var isControlsVisible = true
     private val handler = Handler(Looper.getMainLooper())
@@ -110,8 +109,8 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                 showControlsTemporarily()
             },
             onShowSpeedMenu = {
-                // Show speed menu callback - implemented for speed control UI
-                showSpeedMenu()
+                // Show speed menu callback - can be implemented for speed control UI
+                showControlsTemporarily()
             },
             onShowSettings = {
                 // Show settings callback - can be implemented for settings UI
@@ -360,8 +359,6 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(hideControlsRunnable)
-        speedOverlayMenu?.destroy()
-        speedOverlayMenu = null
         tvRemoteHandler.destroy()
         videoPlayer.release()
     }
@@ -435,24 +432,6 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         
         // Schedule new hide task
         handler.postDelayed(hideControlsRunnable, CONTROLS_HIDE_DELAY)
-    }
-    
-    private fun showSpeedMenu() {
-        if (speedOverlayMenu == null) {
-            speedOverlayMenu = SpeedOverlayMenu(
-                context = this,
-                exoPlayer = videoPlayer.getPlayer(),
-                onSpeedChanged = { speed ->
-                    // Speed changed callback
-                    android.util.Log.d("VideoPlayerActivity", "Playback speed changed to: ${speed}x")
-                },
-                onClose = {
-                    // Speed menu closed callback
-                    speedOverlayMenu = null
-                }
-            )
-        }
-        speedOverlayMenu?.show()
     }
     
 

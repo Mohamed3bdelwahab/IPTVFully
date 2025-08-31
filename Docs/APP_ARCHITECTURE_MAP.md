@@ -4,7 +4,7 @@
 
 ### **Main Navigation Flow:**
 ```
-HomeScreen → SimpleSeriesScreen → SeriesInfoView → PlayerScreen
+HomeScreen → SeriesScreen → SeriesInfoView → PlayerScreen
 ```
 
 ## 📋 **Component Hierarchy**
