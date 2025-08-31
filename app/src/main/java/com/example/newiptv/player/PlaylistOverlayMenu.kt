@@ -205,8 +205,8 @@ class PlaylistOverlayMenu(
                 return false // Let RecyclerView handle selection
             }
             else -> {
-                // Any other key resets auto-hide timer
-                android.util.Log.d("PlaylistOverlayMenu", "Other key pressed: ${event.keyCode}")
+                // Any other key resets auto-hide timer and prevents player interference
+                android.util.Log.d("PlaylistOverlayMenu", "Other key pressed: ${event.keyCode} - consuming to prevent player interference")
                 scheduleAutoHide()
                 return true // Consume other keys to prevent player interference
             }
