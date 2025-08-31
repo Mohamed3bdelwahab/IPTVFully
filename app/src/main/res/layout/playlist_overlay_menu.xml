@@ -2,9 +2,9 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#80000000"
+    android:background="#CC000000"
     android:orientation="vertical"
-    android:padding="32dp">
+    android:padding="16dp">
 
     <!-- Header Section -->
     <LinearLayout
@@ -20,15 +20,15 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Playlist (0 episodes)"
-            android:textSize="24sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
             android:fontFamily="sans-serif-medium" />
 
         <ImageButton
             android:id="@+id/btnClosePlaylist"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_close"
             android:contentDescription="Close Playlist"
@@ -44,7 +44,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:background="@drawable/playlist_background"
-        android:padding="8dp"
+        android:padding="4dp"
         android:clipToPadding="false"
         android:scrollbars="vertical"
         android:fadeScrollbars="false" />
@@ -61,8 +61,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Use D-pad to navigate • Enter to select • Back to close"
-            android:textSize="14sp"
+            android:text="D-pad: Navigate • Enter: Select • Back: Close"
+            android:textSize="12sp"
             android:textColor="#CCCCCC"
             android:fontFamily="sans-serif" />
 
@@ -71,12 +71,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Current: Episode 1"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textColor="#FFFFFF"
             android:fontFamily="sans-serif-medium"
             android:background="@drawable/current_episode_badge"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="4dp" />
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp" />
 
     </LinearLayout>
 

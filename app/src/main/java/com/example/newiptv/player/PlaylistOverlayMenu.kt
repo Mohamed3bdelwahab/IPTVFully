@@ -60,14 +60,16 @@ class PlaylistOverlayMenu(
             
             // Setup window parameters
             val params = WindowManager.LayoutParams().apply {
-                width = WindowManager.LayoutParams.MATCH_PARENT
-                height = WindowManager.LayoutParams.MATCH_PARENT
+                width = 400 // Fixed width for smaller size
+                height = 600 // Fixed height for smaller size
                 type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                 format = PixelFormat.TRANSLUCENT
-                gravity = Gravity.CENTER
+                gravity = Gravity.TOP or Gravity.END // Top right corner
+                x = 50 // Margin from right edge
+                y = 100 // Margin from top
             }
             
             // Add the overlay to window
@@ -154,13 +156,19 @@ class PlaylistOverlayMenu(
             // Highlight current episode
             highlightCurrentEpisode()
             
-            // Setup key event handling
+            // Setup key event handling for focused mode
             view.isFocusable = true
             view.isFocusableInTouchMode = true
             view.requestFocus()
             
+            // Set up key listener to capture all key events
             view.setOnKeyListener { _, keyCode, event ->
-                handleKeyEvent(event)
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    android.util.Log.d("PlaylistOverlayMenu", "Key event captured: ${event.keyCode}")
+                    handleKeyEvent(event)
+                    return@setOnKeyListener true // Consume the event
+                }
+                false
             }
         }
     }
@@ -173,30 +181,34 @@ class PlaylistOverlayMenu(
     }
     
     private fun handleKeyEvent(event: KeyEvent): Boolean {
-        if (event.action != KeyEvent.ACTION_DOWN) return false
-        
         android.util.Log.d("PlaylistOverlayMenu", "Handling key event: ${event.keyCode}")
         
         when (event.keyCode) {
             KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_ESCAPE -> {
+                android.util.Log.d("PlaylistOverlayMenu", "Back/Escape pressed - hiding playlist")
                 hide()
                 return true
             }
             KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_DPAD_LEFT,
-            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                // Handle navigation within playlist
+                android.util.Log.d("PlaylistOverlayMenu", "D-pad navigation in playlist")
+                scheduleAutoHide()
+                return false // Let RecyclerView handle navigation
+            }
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_DPAD_CENTER -> {
-                // Reset auto-hide timer on any navigation
+                // Handle episode selection
+                android.util.Log.d("PlaylistOverlayMenu", "Enter/Center pressed - episode selection")
                 scheduleAutoHide()
-                return false // Let the RecyclerView handle these events
+                return false // Let RecyclerView handle selection
             }
             else -> {
-                // Reset auto-hide timer on any key press
+                // Any other key resets auto-hide timer
+                android.util.Log.d("PlaylistOverlayMenu", "Other key pressed: ${event.keyCode}")
                 scheduleAutoHide()
-                return false
+                return true // Consume other keys to prevent player interference
             }
         }
     }
