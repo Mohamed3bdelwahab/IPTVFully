@@ -309,7 +309,7 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                         android.util.Log.d("VideoPlayerActivity", "Final episode $index: ${episode.title} (Season ${episode.season}, Episode ${episode.episodeNum})")
                     }
                 }
-            } catch (e: Exception) {
+        } catch (e: Exception) {
                 android.util.Log.e("VideoPlayerActivity", "Error loading episodes for navigation", e)
                 e.printStackTrace()
             }
