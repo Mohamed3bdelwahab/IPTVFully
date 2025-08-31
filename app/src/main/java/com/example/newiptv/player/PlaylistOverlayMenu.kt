@@ -58,18 +58,18 @@ class PlaylistOverlayMenu(
             // Setup UI components
             setupUI()
             
-            // Setup window parameters
+            // Setup window parameters - Small size in top right corner
             val params = WindowManager.LayoutParams().apply {
-                width = 400 // Fixed width for smaller size
-                height = 600 // Fixed height for smaller size
+                width = 350 // Smaller width for compact menu
+                height = 400 // Smaller height for compact menu
                 type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                 format = PixelFormat.TRANSLUCENT
                 gravity = Gravity.TOP or Gravity.END // Top right corner
-                x = 50 // Margin from right edge
-                y = 100 // Margin from top
+                x = 30 // Smaller margin from right edge
+                y = 80 // Smaller margin from top
             }
             
             // Add the overlay to window
@@ -205,8 +205,8 @@ class PlaylistOverlayMenu(
                 return false // Let RecyclerView handle selection
             }
             else -> {
-                // Any other key resets auto-hide timer and prevents player interference
-                android.util.Log.d("PlaylistOverlayMenu", "Other key pressed: ${event.keyCode} - consuming to prevent player interference")
+                // Any other key resets auto-hide timer
+                android.util.Log.d("PlaylistOverlayMenu", "Other key pressed: ${event.keyCode}")
                 scheduleAutoHide()
                 return true // Consume other keys to prevent player interference
             }
