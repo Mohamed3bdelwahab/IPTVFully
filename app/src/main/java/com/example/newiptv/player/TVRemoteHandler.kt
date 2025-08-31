@@ -43,6 +43,7 @@ class TVRemoteHandler(
     
     // Speed overlay menu
     private var speedOverlayMenu: SpeedOverlayMenu? = null
+    private var playlistOverlayMenu: PlaylistOverlayMenu? = null
     
     /**
      * Handle key events from TV remote
@@ -59,6 +60,11 @@ class TVRemoteHandler(
         // If speed menu is visible, handle it first
         if (speedOverlayMenu?.isMenuVisible() == true) {
             return speedOverlayMenu?.handleKeyEvent(keyEvent) ?: false
+        }
+        
+        // If playlist menu is visible, handle it first
+        if (playlistOverlayMenu?.isVisible == true) {
+            return playlistOverlayMenu?.handleKeyEvent(keyEvent) ?: false
         }
         
         return when (keyEvent.keyCode) {
@@ -357,10 +363,19 @@ class TVRemoteHandler(
     }
     
     /**
+     * Set playlist overlay menu reference
+     */
+    fun setPlaylistOverlayMenu(menu: PlaylistOverlayMenu?) {
+        playlistOverlayMenu = menu
+    }
+    
+    /**
      * Clean up resources
      */
     fun destroy() {
         speedOverlayMenu?.destroy()
         speedOverlayMenu = null
+        playlistOverlayMenu?.destroy()
+        playlistOverlayMenu = null
     }
 }

@@ -567,8 +567,12 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                 onClose = {
                     // Playlist menu closed callback
                     playlistOverlayMenu = null
+                    tvRemoteHandler.setPlaylistOverlayMenu(null)
                 }
             )
+            
+            // Set the playlist menu reference in TVRemoteHandler
+            tvRemoteHandler.setPlaylistOverlayMenu(playlistOverlayMenu)
         }
         
         playlistOverlayMenu?.show()
