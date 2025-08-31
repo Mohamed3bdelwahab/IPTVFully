@@ -209,6 +209,8 @@ class PlaylistOverlayMenu(
             }
         }
     }
+        }
+    }
     
     private fun highlightCurrentEpisode() {
         if (currentEpisodeIndex >= 0 && currentEpisodeIndex < episodes.size) {
