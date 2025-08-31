@@ -26,8 +26,8 @@ class PlaylistOverlayMenu(
     private val context: Context,
     private val episodes: List<EpisodeEntity>,
     private val currentEpisodeIndex: Int,
-    private val onEpisodeSelected: ((EpisodeEntity, Int) -> Unit)?,
-    private val onClose: (() -> Unit)?
+    private var onEpisodeSelected: ((EpisodeEntity, Int) -> Unit)?,
+    private var onClose: (() -> Unit)?
 ) {
     
     private var windowManager: WindowManager? = null
@@ -159,7 +159,7 @@ class PlaylistOverlayMenu(
             view.isFocusableInTouchMode = true
             view.requestFocus()
             
-            view.setOnKeyListener { _, event ->
+            view.setOnKeyListener { _, keyCode, event ->
                 handleKeyEvent(event)
             }
         }
