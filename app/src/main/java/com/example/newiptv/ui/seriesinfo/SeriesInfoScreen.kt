@@ -188,6 +188,7 @@ class SeriesInfoScreen : AppCompatActivity() {
         android.util.Log.d("SeriesInfoScreen", "Episode Season: ${episode.season}")
         android.util.Log.d("SeriesInfoScreen", "Episode DirectSource: ${episode.directSource}")
         android.util.Log.d("SeriesInfoScreen", "Series Name: $seriesName")
+        android.util.Log.d("SeriesInfoScreen", "Series ID: $seriesId")
         
         // Check if URL is valid
         if (episode.directSource.isNullOrEmpty()) {
@@ -195,10 +196,59 @@ class SeriesInfoScreen : AppCompatActivity() {
             return
         }
         
-        val intent = Intent(this, VideoPlayerActivity::class.java)
-        intent.putExtra("video_url", episode.directSource)
-        intent.putExtra("episode_title", "${seriesName} - ${episode.title}")
-        startActivity(intent)
+        // Get current season episodes to find episode index
+        lifecycleScope.launch {
+            try {
+                android.util.Log.d("SeriesInfoScreen", "Getting episodes from database for series: $seriesId")
+                
+                // Use the database directly to get episodes
+                val database = com.example.newiptv.data.db.DatabaseProvider.getDatabase(this@SeriesInfoScreen)
+                val episodeDao = database.episodeDao()
+                
+                val allEpisodes = episodeDao.getEpisodesSync(seriesId)
+                android.util.Log.d("SeriesInfoScreen", "Total episodes in database: ${allEpisodes.size}")
+                
+                val currentSeasonEpisodes = allEpisodes
+                    .filter { it.season == episode.season }
+                    .sortedBy { it.episodeNum }
+                
+                android.util.Log.d("SeriesInfoScreen", "Episodes for season ${episode.season}: ${currentSeasonEpisodes.size}")
+                
+                val episodeIndex = currentSeasonEpisodes.indexOfFirst { it.id == episode.id }
+                
+                android.util.Log.d("SeriesInfoScreen", "Episode index in season: $episodeIndex")
+                android.util.Log.d("SeriesInfoScreen", "Total episodes in season: ${currentSeasonEpisodes.size}")
+                
+                // Log all episodes in the season
+                currentSeasonEpisodes.forEachIndexed { index, ep ->
+                    android.util.Log.d("SeriesInfoScreen", "Season episode $index: ${ep.title} (ID: ${ep.id})")
+                }
+                
+                val intent = Intent(this@SeriesInfoScreen, VideoPlayerActivity::class.java)
+                intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_URL, episode.directSource)
+                intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_TITLE, "${seriesName} - ${episode.title}")
+                intent.putExtra(VideoPlayerActivity.EXTRA_SERIES_ID, seriesId)
+                intent.putExtra(VideoPlayerActivity.EXTRA_SEASON_NUMBER, episode.season)
+                intent.putExtra(VideoPlayerActivity.EXTRA_EPISODE_INDEX, episodeIndex)
+                
+                android.util.Log.d("SeriesInfoScreen", "Launching VideoPlayerActivity with:")
+                android.util.Log.d("SeriesInfoScreen", "  - Video URL: ${episode.directSource}")
+                android.util.Log.d("SeriesInfoScreen", "  - Series ID: $seriesId")
+                android.util.Log.d("SeriesInfoScreen", "  - Season Number: ${episode.season}")
+                android.util.Log.d("SeriesInfoScreen", "  - Episode Index: $episodeIndex")
+                
+                startActivity(intent)
+            } catch (e: Exception) {
+                android.util.Log.e("SeriesInfoScreen", "Error getting episode index", e)
+                e.printStackTrace()
+                
+                // Fallback: launch without navigation data
+                val intent = Intent(this@SeriesInfoScreen, VideoPlayerActivity::class.java)
+                intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_URL, episode.directSource)
+                intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_TITLE, "${seriesName} - ${episode.title}")
+                startActivity(intent)
+            }
+        }
     }
 }
 

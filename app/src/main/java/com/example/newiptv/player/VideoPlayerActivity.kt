@@ -13,6 +13,9 @@ import androidx.core.content.ContextCompat
 import androidx.media3.ui.PlayerView
 import com.example.newiptv.R
 import com.example.newiptv.databinding.ActivityVideoPlayerBinding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 /**
@@ -25,14 +28,24 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private lateinit var videoPlayer: IPTVVideoPlayer
     private lateinit var tvRemoteHandler: TVRemoteHandler
     private var speedOverlayMenu: SpeedOverlayMenu? = null
+    private var playlistOverlayMenu: PlaylistOverlayMenu? = null
     private var isFullscreen = false
     private var isControlsVisible = true
     private val handler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { hideControls() }
     
+    // Episode navigation data
+    private var seriesId: String? = null
+    private var seasonNumber: Int = 1
+    private var currentEpisodeIndex: Int = 0
+    private var episodes: List<com.example.newiptv.data.db.entities.EpisodeEntity> = emptyList()
+    
     companion object {
         const val EXTRA_VIDEO_URL = "video_url"
         const val EXTRA_VIDEO_TITLE = "video_title"
+        const val EXTRA_SERIES_ID = "series_id"
+        const val EXTRA_SEASON_NUMBER = "season_number"
+        const val EXTRA_EPISODE_INDEX = "episode_index"
         private const val CONTROLS_HIDE_DELAY = 3000L // 3 seconds
         private const val PROGRESS_UPDATE_INTERVAL = 1000L // 1 second
     }
@@ -98,16 +111,16 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                 showControlsTemporarily()
             },
             onNextEpisode = {
-                // Next episode callback - can be implemented for playlist navigation
-                showControlsTemporarily()
+                // Next episode callback - implemented for playlist navigation
+                playNextEpisode()
             },
             onPrevEpisode = {
-                // Previous episode callback - can be implemented for playlist navigation
-                showControlsTemporarily()
+                // Previous episode callback - implemented for playlist navigation
+                playPreviousEpisode()
             },
             onShowPlaylist = {
-                // Show playlist callback - can be implemented for playlist UI
-                showControlsTemporarily()
+                // Show playlist callback - implemented for playlist UI
+                showPlaylistMenu()
             },
             onShowSpeedMenu = {
                 // Show speed menu callback - implemented for speed control UI
@@ -219,14 +232,87 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         val videoUrl = intent.getStringExtra(EXTRA_VIDEO_URL)
         val videoTitle = intent.getStringExtra(EXTRA_VIDEO_TITLE)
         
+        // Extract episode navigation data
+        seriesId = intent.getStringExtra(EXTRA_SERIES_ID)
+        seasonNumber = intent.getIntExtra(EXTRA_SEASON_NUMBER, 1)
+        currentEpisodeIndex = intent.getIntExtra(EXTRA_EPISODE_INDEX, 0)
+        
+        android.util.Log.d("VideoPlayerActivity", "=== LOADING VIDEO ===")
+        android.util.Log.d("VideoPlayerActivity", "Series ID: $seriesId")
+        android.util.Log.d("VideoPlayerActivity", "Season Number: $seasonNumber")
+        android.util.Log.d("VideoPlayerActivity", "Episode Index: $currentEpisodeIndex")
+        android.util.Log.d("VideoPlayerActivity", "Video URL: $videoUrl")
+        android.util.Log.d("VideoPlayerActivity", "Video Title: $videoTitle")
+        
         if (videoUrl != null) {
             binding.tvTitle.text = videoTitle ?: "Video Player"
             videoPlayer.loadVideo(videoUrl)
+            
+            // Load episodes for navigation if series ID is available
+            if (seriesId != null) {
+                loadEpisodesForNavigation()
+            }
         } else {
             // Load test video
             val testUrl = "http://aws85485.amazonedge.net/series/moh7amed819/150730/172237.mkv"
             binding.tvTitle.text = "Test Video (MKV)"
             videoPlayer.loadVideo(testUrl)
+        }
+    }
+    
+    private fun loadEpisodesForNavigation() {
+        android.util.Log.d("VideoPlayerActivity", "=== LOADING EPISODES FOR NAVIGATION ===")
+        android.util.Log.d("VideoPlayerActivity", "Series ID: $seriesId")
+        android.util.Log.d("VideoPlayerActivity", "Season Number: $seasonNumber")
+        
+        if (seriesId.isNullOrEmpty()) {
+            android.util.Log.e("VideoPlayerActivity", "Series ID is null or empty, cannot load episodes")
+            return
+        }
+        
+        // Use coroutine to load episodes from database
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val database = com.example.newiptv.data.db.DatabaseProvider.getDatabase(this@VideoPlayerActivity)
+                val episodeDao = database.episodeDao()
+                
+                android.util.Log.d("VideoPlayerActivity", "Database and DAO initialized successfully")
+                
+                // Load all episodes for the series first
+                val allEpisodes = episodeDao.getEpisodesSync(seriesId!!)
+                android.util.Log.d("VideoPlayerActivity", "Total episodes loaded for series $seriesId: ${allEpisodes.size}")
+                
+                // Log all episodes to see what we have
+                allEpisodes.forEach { episode ->
+                    android.util.Log.d("VideoPlayerActivity", "All episodes - ID: ${episode.id}, Title: ${episode.title}, Season: ${episode.season}, Episode: ${episode.episodeNum}")
+                }
+                
+                // Filter episodes for the current season
+                val loadedEpisodes = allEpisodes
+                    .filter { it.season == seasonNumber }
+                    .sortedBy { it.episodeNum }
+                
+                android.util.Log.d("VideoPlayerActivity", "Filtered episodes for season $seasonNumber: ${loadedEpisodes.size}")
+                
+                // Log filtered episodes
+                loadedEpisodes.forEach { episode ->
+                    android.util.Log.d("VideoPlayerActivity", "Filtered episode - ID: ${episode.id}, Title: ${episode.title}, Season: ${episode.season}, Episode: ${episode.episodeNum}")
+                }
+                
+                // Update UI on main thread
+                runOnUiThread {
+                    episodes = loadedEpisodes
+                    android.util.Log.d("VideoPlayerActivity", "Episodes list updated with ${episodes.size} episodes")
+                    
+                    // Log final episode details
+                    episodes.forEachIndexed { index, episode ->
+                        android.util.Log.d("VideoPlayerActivity", "Final episode $index: ${episode.title} (Season ${episode.season}, Episode ${episode.episodeNum})")
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("VideoPlayerActivity", "Error loading episodes for navigation", e)
+                e.printStackTrace()
+            }
         }
     }
     
@@ -362,6 +448,8 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         handler.removeCallbacks(hideControlsRunnable)
         speedOverlayMenu?.destroy()
         speedOverlayMenu = null
+        playlistOverlayMenu?.destroy()
+        playlistOverlayMenu = null
         tvRemoteHandler.destroy()
         videoPlayer.release()
     }
@@ -453,6 +541,106 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             )
         }
         speedOverlayMenu?.show()
+    }
+    
+    private fun showPlaylistMenu() {
+        android.util.Log.d("VideoPlayerActivity", "=== SHOWING PLAYLIST MENU ===")
+        android.util.Log.d("VideoPlayerActivity", "Episodes available: ${episodes.size}")
+        android.util.Log.d("VideoPlayerActivity", "Current episode index: $currentEpisodeIndex")
+        
+        if (episodes.isEmpty()) {
+            android.util.Log.w("VideoPlayerActivity", "No episodes available for playlist")
+            showControlsTemporarily()
+            return
+        }
+        
+        if (playlistOverlayMenu == null) {
+            playlistOverlayMenu = PlaylistOverlayMenu(
+                context = this,
+                episodes = episodes,
+                currentEpisodeIndex = currentEpisodeIndex,
+                onEpisodeSelected = { episode, index ->
+                    android.util.Log.d("VideoPlayerActivity", "Playlist episode selected: ${episode.title} at index $index")
+                    currentEpisodeIndex = index
+                    playEpisodeAtIndex(index)
+                },
+                onClose = {
+                    // Playlist menu closed callback
+                    playlistOverlayMenu = null
+                }
+            )
+        }
+        
+        playlistOverlayMenu?.show()
+    }
+    
+    private fun playNextEpisode() {
+        android.util.Log.d("VideoPlayerActivity", "=== PLAYING NEXT EPISODE ===")
+        android.util.Log.d("VideoPlayerActivity", "Current episode index: $currentEpisodeIndex")
+        android.util.Log.d("VideoPlayerActivity", "Total episodes: ${episodes.size}")
+        android.util.Log.d("VideoPlayerActivity", "Episodes list: ${episodes.map { it.title }}")
+        
+        if (episodes.isEmpty()) {
+            android.util.Log.e("VideoPlayerActivity", "Episodes list is empty! Cannot play next episode")
+            showControlsTemporarily()
+            return
+        }
+        
+        if (currentEpisodeIndex < episodes.size - 1) {
+            currentEpisodeIndex++
+            android.util.Log.d("VideoPlayerActivity", "Moving to next episode at index: $currentEpisodeIndex")
+            playEpisodeAtIndex(currentEpisodeIndex)
+        } else {
+            android.util.Log.d("VideoPlayerActivity", "Already at last episode (index: $currentEpisodeIndex)")
+            showControlsTemporarily()
+        }
+    }
+    
+    private fun playPreviousEpisode() {
+        android.util.Log.d("VideoPlayerActivity", "=== PLAYING PREVIOUS EPISODE ===")
+        android.util.Log.d("VideoPlayerActivity", "Current episode index: $currentEpisodeIndex")
+        android.util.Log.d("VideoPlayerActivity", "Total episodes: ${episodes.size}")
+        android.util.Log.d("VideoPlayerActivity", "Episodes list: ${episodes.map { it.title }}")
+        
+        if (episodes.isEmpty()) {
+            android.util.Log.e("VideoPlayerActivity", "Episodes list is empty! Cannot play previous episode")
+            showControlsTemporarily()
+            return
+        }
+        
+        if (currentEpisodeIndex > 0) {
+            currentEpisodeIndex--
+            android.util.Log.d("VideoPlayerActivity", "Moving to previous episode at index: $currentEpisodeIndex")
+            playEpisodeAtIndex(currentEpisodeIndex)
+        } else {
+            android.util.Log.d("VideoPlayerActivity", "Already at first episode (index: $currentEpisodeIndex)")
+            showControlsTemporarily()
+        }
+    }
+    
+    private fun playEpisodeAtIndex(index: Int) {
+        if (index in episodes.indices) {
+            val episode = episodes[index]
+            android.util.Log.d("VideoPlayerActivity", "Playing episode at index $index: ${episode.title}")
+            android.util.Log.d("VideoPlayerActivity", "Episode directSource: ${episode.directSource}")
+            
+            if (!episode.directSource.isNullOrEmpty()) {
+                // Update title
+                binding.tvTitle.text = episode.title
+                
+                // Load and play the episode
+                videoPlayer.loadVideo(episode.directSource)
+                
+                // Show controls briefly
+                showControlsTemporarily()
+            } else {
+                android.util.Log.e("VideoPlayerActivity", "Episode directSource is null or empty!")
+                showControlsTemporarily()
+            }
+        } else {
+            android.util.Log.e("VideoPlayerActivity", "Invalid episode index: $index")
+            showControlsTemporarily()
+        }
     }
     
 

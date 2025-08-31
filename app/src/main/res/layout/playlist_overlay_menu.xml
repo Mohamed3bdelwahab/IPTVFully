@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#80000000"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <!-- Header Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:id="@+id/tvPlaylistHeader"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Playlist (0 episodes)"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:fontFamily="sans-serif-medium" />
+
+        <ImageButton
+            android:id="@+id/btnClosePlaylist"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_close"
+            android:contentDescription="Close Playlist"
+            android:tint="#FFFFFF"
+            android:scaleType="centerInside" />
+
+    </LinearLayout>
+
+    <!-- Episodes List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvEpisodesList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/playlist_background"
+        android:padding="8dp"
+        android:clipToPadding="false"
+        android:scrollbars="vertical"
+        android:fadeScrollbars="false" />
+
+    <!-- Footer Info -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Use D-pad to navigate • Enter to select • Back to close"
+            android:textSize="14sp"
+            android:textColor="#CCCCCC"
+            android:fontFamily="sans-serif" />
+
+        <TextView
+            android:id="@+id/tvCurrentEpisode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Current: Episode 1"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:fontFamily="sans-serif-medium"
+            android:background="@drawable/current_episode_badge"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp" />
+
+    </LinearLayout>
+
+</LinearLayout>
