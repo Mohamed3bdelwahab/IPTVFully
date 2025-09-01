@@ -29,6 +29,9 @@
     <color name="selection_secondary">#FF303F9F</color>
     <color name="selection_border">#FFFFFFFF</color>
     
+    <!-- Accent Colors -->
+    <color name="accent_color">#FF40C4FF</color> <!-- Vibrant Light Blue -->
+    
     <!-- Distinct Focus Colors - High Contrast -->
     <color name="category_focus_color">#FF40C4FF</color> <!-- Vibrant Light Blue -->
     <color name="series_focus_color">#FF69F0AE</color> <!-- Bright Mint Green -->

@@ -8,11 +8,12 @@ import android.widget.ArrayAdapter
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import com.example.newiptv.R
+import com.example.newiptv.data.db.entities.CategoryEntity
 
 class CategoryAdapter(
     context: Context,
-    private val categories: List<String>
-) : ArrayAdapter<String>(context, 0, categories) {
+    private val categories: List<CategoryEntity>
+) : ArrayAdapter<CategoryEntity>(context, 0, categories) {
 
     private var selectedIndex = -1
 
@@ -22,8 +23,14 @@ class CategoryAdapter(
 
         val categoryCard = view.findViewById<CardView>(R.id.categoryCard)
         val categoryTitle = view.findViewById<TextView>(R.id.categoryText)
+        val categoryCount = view.findViewById<TextView>(R.id.categoryCount)
 
-        categoryTitle.text = categories[position]
+        val category = categories[position]
+        categoryTitle.text = category.categoryName
+        
+        // Set series count
+        val count = categoryCounts[position] ?: 0
+        categoryCount.text = "($count series)"
 
         // Set focus change listener for scale animation
         categoryCard.setOnFocusChangeListener { v, hasFocus ->
@@ -41,6 +48,13 @@ class CategoryAdapter(
 
     fun setSelectedIndex(index: Int) {
         selectedIndex = index
+        notifyDataSetChanged()
+    }
+    
+    private val categoryCounts = mutableMapOf<Int, Int>()
+    
+    fun updateCategoryCount(position: Int, count: Int) {
+        categoryCounts[position] = count
         notifyDataSetChanged()
     }
 }

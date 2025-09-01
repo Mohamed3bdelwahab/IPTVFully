@@ -31,11 +31,16 @@
 6. **[NewIPTV_V2_ROOM_DATABASE_IMPLEMENTATION.md](ROOM_DATABASE_IMPLEMENTATION.md)** - Database schema and Room implementation
 7. **[NewIPTV_V2_HOVER_ANIMATION_IMPLEMENTATION.md](HOVER_ANIMATION_IMPLEMENTATION.md)** - UI animations and focus system
 8. **[NewIPTV_V2_PLAYLIST_COMPLETE_DOCUMENTATION.md](PLAYLIST_COMPLETE_DOCUMENTATION.md)** - Playlist system and episode navigation
+9. **[NewIPTV_V2_PLAYLIST_NAVIGATION_FIXES.md](PLAYLIST_NAVIGATION_FIXES.md)** - Playlist menu D-pad navigation and episode selection
+10. **[NewIPTV_V2_OK_ENTER_KEY_FIXES.md](OK_ENTER_KEY_FIXES.md)** - OK/Enter key handling and comprehensive logging system
+11. **[NewIPTV_V2_UP_DOWN_KEY_FIXES.md](UP_DOWN_KEY_FIXES.md)** - UP/DOWN key navigation fixes and vertical navigation
+12. **[NewIPTV_V2_RIGHT_PANEL_NAVIGATION_FIXES.md](RIGHT_PANEL_NAVIGATION_FIXES.md)** - Right panel navigation fixes and scrolling improvements
+13. **[NewIPTV_V2_LEANBACK_IMPLEMENTATION.md](NewIPTV_V2_LEANBACK_IMPLEMENTATION.md)** - Android Leanback library implementation for TV navigation
 
 ### **Technical Documentation**
-9. **[NewIPTV_V2_API_INSTRUCTION.md](API_instruction.txt)** - API integration and data flow
-10. **[NewIPTV_V2_TV_REMOTE_COMPLETE_DOCUMENTATION.md](TV_REMOTE_COMPLETE_DOCUMENTATION.md)** - TV remote controls and navigation
-11. **[NewIPTV_V2_PLAYBACK_SPEED_COMPLETE_DOCUMENTATION.md](PLAYBACK_SPEED_COMPLETE_DOCUMENTATION.md)** - Playback speed controls
+13. **[NewIPTV_V2_API_INSTRUCTION.md](API_instruction.txt)** - API integration and data flow
+14. **[NewIPTV_V2_TV_REMOTE_COMPLETE_DOCUMENTATION.md](TV_REMOTE_COMPLETE_DOCUMENTATION.md)** - TV remote controls and navigation
+15. **[NewIPTV_V2_PLAYBACK_SPEED_COMPLETE_DOCUMENTATION.md](PLAYBACK_SPEED_COMPLETE_DOCUMENTATION.md)** - Playback speed controls
 
 ---
 
@@ -89,6 +94,15 @@
 - **Fallback Mechanism**: Automatic URL construction when direct_source is null
 - **Extension Handling**: Dynamic file extension detection
 - **Error Handling**: Graceful fallback for malformed URLs
+
+#### **8. Android Leanback Integration**
+- **TV-Optimized Navigation**: Built-in DPAD support with automatic focus management
+- **SeriesGridFragment**: VerticalGridSupportFragment for series display
+- **SeriesCardPresenter**: Custom presenter for series items with cover images
+- **Automatic Navigation**: UP/DOWN/LEFT/RIGHT keys work out of the box
+- **Enter/OK Support**: DPAD_CENTER automatically triggers selection
+- **Performance Optimization**: Leanback optimized for TV hardware
+- **Accessibility**: Built-in accessibility features
 
 ---
 

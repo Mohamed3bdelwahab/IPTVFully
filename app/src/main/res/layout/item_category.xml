@@ -14,16 +14,34 @@
     app:cardBackgroundColor="@null"
     android:background="@drawable/focusable_category_background">
 
-    <TextView
-        android:id="@+id/categoryText"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:text="Category"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:gravity="center"
-        android:fontFamily="sans-serif-medium" />
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/categoryText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Category"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:fontFamily="sans-serif-medium" />
+
+        <TextView
+            android:id="@+id/categoryCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="(0 series)"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:fontFamily="sans-serif" />
+
+    </LinearLayout>
 
 </androidx.cardview.widget.CardView>

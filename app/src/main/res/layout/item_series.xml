@@ -14,16 +14,66 @@
     app:cardBackgroundColor="@null"
     android:background="@drawable/focusable_series_background">
 
-    <TextView
-        android:id="@+id/seriesTitle"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:text="Series Title"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:gravity="center"
-        android:fontFamily="sans-serif-medium" />
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- Cover Image -->
+        <ImageView
+            android:id="@+id/seriesCover"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:scaleType="centerCrop"
+            android:background="@color/panel_background"
+            android:contentDescription="Series Cover" />
+
+        <!-- Series Name -->
+        <TextView
+            android:id="@+id/seriesTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:padding="8dp"
+            android:text="Series Title"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium" />
+
+        <!-- Rating -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/seriesRating"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="★ 4.0"
+                android:textSize="12sp"
+                android:textColor="@color/accent_color"
+                android:fontFamily="sans-serif-medium" />
+
+            <TextView
+                android:id="@+id/seriesYear"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="(2019)"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android:fontFamily="sans-serif" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </androidx.cardview.widget.CardView>
