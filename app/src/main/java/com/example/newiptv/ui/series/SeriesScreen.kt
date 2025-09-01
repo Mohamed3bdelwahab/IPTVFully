@@ -34,6 +34,7 @@ class SeriesScreen : AppCompatActivity() {
     private var selectedCategoryIndex = 0
     private var selectedSeriesIndex = 0
     private var isInCategoryPanel = true
+    private var currentFocusIndex = 0
 
     private lateinit var repository: TvRepository
     private var categories: List<CategoryEntity> = emptyList()
@@ -71,15 +72,14 @@ class SeriesScreen : AppCompatActivity() {
                     val category = categories[position]
                     android.util.Log.d("SeriesScreen", "Category: ${category.categoryName} (ID: ${category.categoryId})")
                     
-                    // Always update selection and load series when position changes
+                    // Only update selection index, don't load series automatically
                     if (position != selectedCategoryIndex) {
                         selectedCategoryIndex = position
-                        android.util.Log.d("SeriesScreen", "=== CATEGORY SELECTION CHANGED (TV REMOTE) ===")
+                        android.util.Log.d("SeriesScreen", "=== CATEGORY FOCUS CHANGED (TV REMOTE) ===")
                         android.util.Log.d("SeriesScreen", "New Position: $position")
                         android.util.Log.d("SeriesScreen", "Category ID: ${category.categoryId}")
 
-                        // ✅ Trigger series loading immediately when selection changes
-                        loadSeriesForCategory(category.categoryId)
+                        // ✅ Only update visual selection, don't load series yet
                         updateCategorySelection()
                     } else {
                         android.util.Log.d("SeriesScreen", "Same position, no change needed")
@@ -134,12 +134,21 @@ class SeriesScreen : AppCompatActivity() {
 
         val rootView = findViewById<View>(android.R.id.content)
         rootView.setOnKeyListener { _, keyCode, event ->
+            // ✅ Comprehensive key event logging
+            android.util.Log.d("SeriesScreen", "=== KEY EVENT DETECTED ===")
+            android.util.Log.d("SeriesScreen", "Key Code: $keyCode (0x${keyCode.toString(16)})")
+            android.util.Log.d("SeriesScreen", "Key Action: ${event.action}")
+            android.util.Log.d("SeriesScreen", "Is in category panel: $isInCategoryPanel")
+            android.util.Log.d("SeriesScreen", "Selected category index: $selectedCategoryIndex")
+            android.util.Log.d("SeriesScreen", "Selected series index: $selectedSeriesIndex")
+            
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
                         if (!isInCategoryPanel && selectedSeriesIndex % 3 == 0) {
                             isInCategoryPanel = true
                             categoryListView.requestFocus()
+                            android.util.Log.d("SeriesScreen", "DPAD_LEFT: Moved to category panel")
                             return@setOnKeyListener true
                         }
                         false
@@ -148,29 +157,41 @@ class SeriesScreen : AppCompatActivity() {
                         if (isInCategoryPanel) {
                             isInCategoryPanel = false
                             seriesRecyclerView.requestFocus()
+                            android.util.Log.d("SeriesScreen", "DPAD_RIGHT: Moved to series panel")
                             return@setOnKeyListener true
                         }
                         false
                     }
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    KeyEvent.KEYCODE_DPAD_UP -> {
                         if (isInCategoryPanel) {
-                            if (selectedCategoryIndex < categories.size) {
-                                val category = categories[selectedCategoryIndex]
-                                loadSeriesForCategory(category.categoryId)
-                            }
+                            navigateCategoryUp()
                         } else {
-                            val series = seriesAdapter.getSeriesAt(selectedSeriesIndex)
-                            if (series != null) {
-                                val categoryName = if (selectedCategoryIndex < categories.size) categories[selectedCategoryIndex].categoryName else ""
-                                val intent = Intent(this, SeriesInfoScreen::class.java).apply {
-                                    putExtra("series_name", series.name)
-                                    putExtra("series_category", categoryName)
-                                    putExtra("series_id", series.itemId)
-                                }
-                                startActivity(intent)
-                            }
+                            navigateSeriesUp()
                         }
-                        true
+                        return@setOnKeyListener true
+                    }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        if (isInCategoryPanel) {
+                            navigateCategoryDown()
+                        } else {
+                            navigateSeriesDown()
+                        }
+                        return@setOnKeyListener true
+                    }
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        android.util.Log.d("SeriesScreen", "=== ENTER/CENTER KEY PRESSED ===")
+                        android.util.Log.d("SeriesScreen", "Is in category panel: $isInCategoryPanel")
+                        android.util.Log.d("SeriesScreen", "Selected category index: $selectedCategoryIndex")
+                        android.util.Log.d("SeriesScreen", "Selected series index: $selectedSeriesIndex")
+                        
+                        if (isInCategoryPanel) {
+                            android.util.Log.d("SeriesScreen", "Selecting current category...")
+                            selectCurrentCategory()
+                        } else {
+                            android.util.Log.d("SeriesScreen", "Selecting current series...")
+                            selectCurrentSeries()
+                        }
+                        return@setOnKeyListener true
                     }
                     KeyEvent.KEYCODE_BACK -> {
                         finish()
@@ -185,6 +206,69 @@ class SeriesScreen : AppCompatActivity() {
     private fun updateCategorySelection() {
         categoryListView.setSelection(selectedCategoryIndex)
         updateCategoryVisualSelection()
+    }
+    
+    private fun navigateCategoryUp() {
+        if (selectedCategoryIndex > 0) {
+            selectedCategoryIndex--
+            updateCategorySelection()
+            android.util.Log.d("SeriesScreen", "Navigated UP to category index: $selectedCategoryIndex")
+        }
+    }
+    
+    private fun navigateCategoryDown() {
+        if (selectedCategoryIndex < categories.size - 1) {
+            selectedCategoryIndex++
+            updateCategorySelection()
+            android.util.Log.d("SeriesScreen", "Navigated DOWN to category index: $selectedCategoryIndex")
+        }
+    }
+    
+    private fun navigateSeriesUp() {
+        if (selectedSeriesIndex > 0) {
+            selectedSeriesIndex--
+            updateSeriesFocus()
+            android.util.Log.d("SeriesScreen", "Navigated UP to series index: $selectedSeriesIndex")
+        }
+    }
+    
+    private fun navigateSeriesDown() {
+        if (selectedSeriesIndex < currentSeries.size - 1) {
+            selectedSeriesIndex++
+            updateSeriesFocus()
+            android.util.Log.d("SeriesScreen", "Navigated DOWN to series index: $selectedSeriesIndex")
+        }
+    }
+    
+    private fun updateSeriesFocus() {
+        seriesRecyclerView.post {
+            val viewHolder = seriesRecyclerView.findViewHolderForAdapterPosition(selectedSeriesIndex)
+            viewHolder?.itemView?.requestFocus()
+        }
+    }
+    
+    private fun selectCurrentCategory() {
+        if (selectedCategoryIndex < categories.size) {
+            val category = categories[selectedCategoryIndex]
+            android.util.Log.d("SeriesScreen", "=== CATEGORY SELECTED (ENTER/CENTER) ===")
+            android.util.Log.d("SeriesScreen", "Selecting category: ${category.categoryName} at index: $selectedCategoryIndex")
+            android.util.Log.d("SeriesScreen", "Category ID: ${category.categoryId}")
+            loadSeriesForCategory(category.categoryId)
+        }
+    }
+    
+    private fun selectCurrentSeries() {
+        val series = seriesAdapter.getSeriesAt(selectedSeriesIndex)
+        if (series != null) {
+            android.util.Log.d("SeriesScreen", "Selecting series: ${series.name} at index: $selectedSeriesIndex")
+            val categoryName = if (selectedCategoryIndex < categories.size) categories[selectedCategoryIndex].categoryName else ""
+            val intent = Intent(this, SeriesInfoScreen::class.java).apply {
+                putExtra("series_name", series.name)
+                putExtra("series_category", categoryName)
+                putExtra("series_id", series.itemId)
+            }
+            startActivity(intent)
+        }
     }
 
     private fun loadCategories() {

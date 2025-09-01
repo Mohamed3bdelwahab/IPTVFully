@@ -3,6 +3,7 @@ package com.example.newiptv.ui.seriesinfo
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +31,10 @@ class SeriesInfoScreen : AppCompatActivity() {
     private lateinit var repository: TvRepository
     private var seriesId: String = ""
     private var seriesName: String = ""
+    private var selectedSeasonIndex = 0
+    private var selectedEpisodeIndex = 0
+    private var isInSeasonPanel = true
+    private var currentFocusIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +56,9 @@ class SeriesInfoScreen : AppCompatActivity() {
         episodeRecyclerView = findViewById(R.id.episodesRecyclerView)
         loadingText = findViewById(R.id.loadingText)
         errorText = findViewById(R.id.errorText)
+        
+        // Set initial focus to season panel
+        seasonListView.requestFocus()
     }
 
     private fun setupAdapters() {
@@ -71,22 +79,23 @@ class SeriesInfoScreen : AppCompatActivity() {
             loadEpisodesForSeason(seasonNumber)
         }
         
-        // Add season selection listener for TV remote navigation
+        // Add season selection listener for TV remote navigation (ONLY update focus, don't load data)
         seasonListView.setOnItemSelectedListener(object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
-                android.util.Log.d("SeriesInfoScreen", "=== ON SEASON SELECTED CALLED ===")
+                android.util.Log.d("SeriesInfoScreen", "=== ON SEASON FOCUS CHANGED ===")
                 android.util.Log.d("SeriesInfoScreen", "Season Position: $position")
                 
                 val seasonNumber = position + 1 // Assuming seasons start from 1
                 android.util.Log.d("SeriesInfoScreen", "Season Number: $seasonNumber")
                 android.util.Log.d("SeriesInfoScreen", "Series ID: $seriesId")
                 
-                // Always load episodes when season selection changes
-                loadEpisodesForSeason(seasonNumber)
+                // ✅ Only update selection index, don't load episodes automatically
+                selectedSeasonIndex = position
+                android.util.Log.d("SeriesInfoScreen", "Updated selectedSeasonIndex to: $selectedSeasonIndex")
             }
             
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
-                android.util.Log.d("SeriesInfoScreen", "=== NO SEASON SELECTED ===")
+                android.util.Log.d("SeriesInfoScreen", "=== NO SEASON FOCUSED ===")
             }
         })
 
@@ -94,8 +103,150 @@ class SeriesInfoScreen : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@SeriesInfoScreen)
             adapter = episodeAdapter
         }
+        
+        // Setup TV remote navigation
+        setupTVRemoteNavigation()
     }
-
+    
+    private fun setupTVRemoteNavigation() {
+        val rootView = findViewById<View>(android.R.id.content)
+        rootView.setOnKeyListener { _, keyCode, event ->
+            // ✅ Comprehensive key event logging
+            android.util.Log.d("SeriesInfoScreen", "=== KEY EVENT DETECTED ===")
+            android.util.Log.d("SeriesInfoScreen", "Key Code: $keyCode (0x${keyCode.toString(16)})")
+            android.util.Log.d("SeriesInfoScreen", "Key Action: ${event.action}")
+            android.util.Log.d("SeriesInfoScreen", "Is in season panel: $isInSeasonPanel")
+            android.util.Log.d("SeriesInfoScreen", "Selected season index: $selectedSeasonIndex")
+            android.util.Log.d("SeriesInfoScreen", "Selected episode index: $selectedEpisodeIndex")
+            
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        if (!isInSeasonPanel) {
+                            isInSeasonPanel = true
+                            seasonListView.requestFocus()
+                            android.util.Log.d("SeriesInfoScreen", "DPAD_LEFT: Moved to season panel")
+                            return@setOnKeyListener true
+                        }
+                        false
+                    }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        if (isInSeasonPanel) {
+                            isInSeasonPanel = false
+                            episodeRecyclerView.requestFocus()
+                            android.util.Log.d("SeriesInfoScreen", "DPAD_RIGHT: Moved to episode panel")
+                            return@setOnKeyListener true
+                        }
+                        false
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        if (isInSeasonPanel) {
+                            navigateSeasonUp()
+                        } else {
+                            navigateEpisodeUp()
+                        }
+                        return@setOnKeyListener true
+                    }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        if (isInSeasonPanel) {
+                            navigateSeasonDown()
+                        } else {
+                            navigateEpisodeDown()
+                        }
+                        return@setOnKeyListener true
+                    }
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        android.util.Log.d("SeriesInfoScreen", "=== ENTER/CENTER KEY PRESSED ===")
+                        android.util.Log.d("SeriesInfoScreen", "Is in season panel: $isInSeasonPanel")
+                        android.util.Log.d("SeriesInfoScreen", "Selected season index: $selectedSeasonIndex")
+                        android.util.Log.d("SeriesInfoScreen", "Selected episode index: $selectedEpisodeIndex")
+                        
+                        if (isInSeasonPanel) {
+                            android.util.Log.d("SeriesInfoScreen", "Selecting current season...")
+                            selectCurrentSeason()
+                        } else {
+                            android.util.Log.d("SeriesInfoScreen", "Selecting current episode...")
+                            selectCurrentEpisode()
+                        }
+                        return@setOnKeyListener true
+                    }
+                    KeyEvent.KEYCODE_BACK -> {
+                        finish()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
+        }
+    }
+    
+    private fun navigateSeasonUp() {
+        if (selectedSeasonIndex > 0) {
+            selectedSeasonIndex--
+            updateSeasonSelection()
+            android.util.Log.d("SeriesInfoScreen", "Navigated UP to season index: $selectedSeasonIndex")
+        }
+    }
+    
+    private fun navigateSeasonDown() {
+        // Get seasons count from adapter
+        val seasonsCount = seasonAdapter.count
+        if (selectedSeasonIndex < seasonsCount - 1) {
+            selectedSeasonIndex++
+            updateSeasonSelection()
+            android.util.Log.d("SeriesInfoScreen", "Navigated DOWN to season index: $selectedSeasonIndex")
+        }
+    }
+    
+    private fun navigateEpisodeUp() {
+        if (selectedEpisodeIndex > 0) {
+            selectedEpisodeIndex--
+            updateEpisodeFocus()
+            android.util.Log.d("SeriesInfoScreen", "Navigated UP to episode index: $selectedEpisodeIndex")
+        }
+    }
+    
+    private fun navigateEpisodeDown() {
+        val episodesCount = episodeAdapter.itemCount
+        if (selectedEpisodeIndex < episodesCount - 1) {
+            selectedEpisodeIndex++
+            updateEpisodeFocus()
+            android.util.Log.d("SeriesInfoScreen", "Navigated DOWN to episode index: $selectedEpisodeIndex")
+        }
+    }
+    
+    private fun updateSeasonSelection() {
+        seasonListView.setSelection(selectedSeasonIndex)
+    }
+    
+    private fun updateEpisodeFocus() {
+        episodeRecyclerView.post {
+            val viewHolder = episodeRecyclerView.findViewHolderForAdapterPosition(selectedEpisodeIndex)
+            viewHolder?.itemView?.requestFocus()
+        }
+    }
+    
+    private fun selectCurrentSeason() {
+        val seasonNumber = selectedSeasonIndex + 1 // Assuming seasons start from 1
+        android.util.Log.d("SeriesInfoScreen", "=== SEASON SELECTED (ENTER/CENTER) ===")
+        android.util.Log.d("SeriesInfoScreen", "Selecting season: $seasonNumber at index: $selectedSeasonIndex")
+        android.util.Log.d("SeriesInfoScreen", "Series ID: $seriesId")
+        loadEpisodesForSeason(seasonNumber)
+    }
+    
+    private fun selectCurrentEpisode() {
+        val episode = episodeAdapter.getEpisodeAt(selectedEpisodeIndex)
+        if (episode != null) {
+            android.util.Log.d("SeriesInfoScreen", "=== EPISODE SELECTED (ENTER/CENTER) ===")
+            android.util.Log.d("SeriesInfoScreen", "Selecting episode: ${episode.title} at index: $selectedEpisodeIndex")
+            android.util.Log.d("SeriesInfoScreen", "Episode season: ${episode.season}")
+            android.util.Log.d("SeriesInfoScreen", "Episode directSource: ${episode.directSource}")
+            playEpisode(episode)
+        } else {
+            android.util.Log.e("SeriesInfoScreen", "Episode at index $selectedEpisodeIndex is null!")
+        }
+    }
+    
     private fun loadSeasonsAndEpisodes() {
         loadingText.visibility = View.VISIBLE
         errorText.visibility = View.GONE
