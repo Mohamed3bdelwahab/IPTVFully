@@ -10,7 +10,7 @@ import androidx.leanback.widget.VerticalGridPresenter
 import com.example.newiptv.data.db.DatabaseProvider
 import com.example.newiptv.data.db.entities.ItemEntity
 import com.example.newiptv.data.repository.TvRepository
-import com.example.newiptv.ui.seriesinfo.SeriesInfoActivity
+import com.example.newiptv.ui.seriesinfo.SeriesInfoScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,8 +52,8 @@ class SeriesGridFragment : VerticalGridSupportFragment() {
             val series = item as ItemEntity
             Log.d("SeriesGridFragment", "Clicked on series: ${series.name}")
             
-            // Navigate to SeriesInfoActivity
-            val intent = Intent(requireContext(), SeriesInfoActivity::class.java).apply {
+            // Navigate to SeriesInfoScreen
+            val intent = Intent(requireContext(), SeriesInfoScreen::class.java).apply {
                 putExtra("seriesId", series.itemId)
                 putExtra("seriesName", series.name)
             }
@@ -82,7 +82,7 @@ class SeriesGridFragment : VerticalGridSupportFragment() {
                                     }
                                     
                                     // Update category count if parent activity supports it
-                                    (activity as? SeriesScreen)?.updateCategoryCount(
+                                    (activity as? SeriesScreenLeanback)?.updateCategoryCount(
                                         getCategoryIndex(categoryId), 
                                         items.size
                                     )

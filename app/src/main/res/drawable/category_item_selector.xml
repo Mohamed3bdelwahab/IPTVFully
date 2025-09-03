@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Focused state -->
+    <item android:state_focused="true" android:drawable="@color/category_focus_color" />
+
+    <!-- Selected state -->
+    <item android:state_selected="true" android:drawable="@color/category_selected_color" />
+
+    <!-- Default state -->
+    <item android:drawable="@color/category_default_bg" />
+
+</selector>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Outer Glow -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/category_focus_glow" />
+            <corners android:radius="16dp" />
+            <padding
+                android:left="4dp"
+                android:top="4dp"
+                android:right="4dp"
+                android:bottom="4dp" />
+        </shape>
+    </item>
+    
+    <!-- Inner Card -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="@color/category_focus_color"
+                android:centerColor="@color/focus_gradient_end"
+                android:endColor="@color/category_focus_color"
+                android:angle="45" />
+            <corners android:radius="12dp" />
+            <stroke
+                android:width="3dp"
+                android:color="@color/focus_border_white" />
+        </shape>
+    </item>
+    
+</layer-list>

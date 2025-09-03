@@ -70,6 +70,10 @@ class SeriesScreen : AppCompatActivity() {
         setupCategoryList()
         setupSeriesGrid()
         setupTVRemoteNavigation()
+        
+        // Log drawable resources for debugging
+        logDrawableResources()
+        
         loadCategories()
     }
 
@@ -88,6 +92,14 @@ class SeriesScreen : AppCompatActivity() {
         
         // Setup filter spinner
         setupFilterSpinner()
+        
+        // Add focus change listener to category list
+        categoryListView.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                isInCategoryPanel = true
+                KeyEventLogger.logFocusChange("SeriesScreen", "Category", selectedCategoryIndex)
+            }
+        }
         
         // Ensure proper focus handling
         KeyEventLogger.logScreenEvent("SeriesScreen", "Views initialized")
@@ -204,10 +216,34 @@ class SeriesScreen : AppCompatActivity() {
             layoutManager = GridLayoutManager(this@SeriesScreen, 3)
             adapter = seriesAdapter
         }
+        
+        // Add focus change listener to RecyclerView to automatically update panel state
+        seriesRecyclerView.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                isInCategoryPanel = false
+                KeyEventLogger.logFocusChange("SeriesScreen", "Series", selectedSeriesIndex)
+            }
+        }
     }
 
     private fun setupTVRemoteNavigation() {
         categoryListView.requestFocus()
+        isInCategoryPanel = true
+    }
+    
+    /**
+     * Ensures focus stays in the correct panel and updates panel state
+     */
+    private fun ensureCorrectPanelFocus() {
+        if (isInCategoryPanel) {
+            if (!categoryListView.hasFocus()) {
+                categoryListView.requestFocus()
+            }
+        } else {
+            if (!seriesRecyclerView.hasFocus()) {
+                seriesRecyclerView.requestFocus()
+            }
+        }
     }
     
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -263,10 +299,31 @@ class SeriesScreen : AppCompatActivity() {
                             if (selectedCategoryIndex < categories.size) categories[selectedCategoryIndex].categoryName else "Unknown")
                         selectCurrentCategory()
                     } else {
-                        val series = seriesAdapter.getSeriesAt(selectedSeriesIndex)
-                        KeyEventLogger.logItemSelection("SeriesScreen", "Series", selectedSeriesIndex, 
-                            series?.name ?: "Unknown")
-                        selectCurrentSeries()
+                        // Get the actually focused series from RecyclerView instead of using our counter
+                        val focusedView = seriesRecyclerView.focusedChild
+                        if (focusedView != null) {
+                            val position = seriesRecyclerView.getChildAdapterPosition(focusedView)
+                            if (position != RecyclerView.NO_POSITION) {
+                                val selectedSeries = seriesAdapter.getSeriesAt(position)
+                                KeyEventLogger.logItemSelection("SeriesScreen", "Series", position, 
+                                    selectedSeries?.name ?: "Unknown")
+                                // Update our counter to match the actual focus
+                                selectedSeriesIndex = position
+                                selectCurrentSeries()
+                            } else {
+                                // Fallback to our counter if position not found
+                                val series = seriesAdapter.getSeriesAt(selectedSeriesIndex)
+                                KeyEventLogger.logItemSelection("SeriesScreen", "Series", selectedSeriesIndex, 
+                                    series?.name ?: "Unknown")
+                                selectCurrentSeries()
+                            }
+                        } else {
+                            // Fallback to our counter if no focused child
+                            val series = seriesAdapter.getSeriesAt(selectedSeriesIndex)
+                            KeyEventLogger.logItemSelection("SeriesScreen", "Series", selectedSeriesIndex, 
+                                series?.name ?: "Unknown")
+                            selectCurrentSeries()
+                        }
                     }
                     return true
                 }
@@ -303,6 +360,7 @@ class SeriesScreen : AppCompatActivity() {
         if (selectedCategoryIndex > 0) {
             selectedCategoryIndex--
             updateCategorySelection()
+            ensureCorrectPanelFocus() // Ensure we stay in category panel
             KeyEventLogger.logFocusChange("SeriesScreen", "Category", selectedCategoryIndex)
         }
     }
@@ -311,28 +369,33 @@ class SeriesScreen : AppCompatActivity() {
         if (selectedCategoryIndex < categories.size - 1) {
             selectedCategoryIndex++
             updateCategorySelection()
+            ensureCorrectPanelFocus() // Ensure we stay in category panel
             KeyEventLogger.logFocusChange("SeriesScreen", "Category", selectedCategoryIndex)
         }
     }
     
     private fun navigateSeriesUp() {
         val spanCount = 3 // same as GridLayoutManager spanCount
-        if (selectedSeriesIndex - spanCount >= 0) {
-            selectedSeriesIndex -= spanCount
+        val currentPosition = getCurrentFocusedSeriesPosition()
+        if (currentPosition - spanCount >= 0) {
+            selectedSeriesIndex = currentPosition - spanCount
             updateSeriesFocus()
+            ensureCorrectPanelFocus() // Ensure we stay in series panel
             KeyEventLogger.logFocusChange("SeriesScreen", "Series", selectedSeriesIndex)
         } else {
             // Already in top row
             KeyEventLogger.logError("SeriesScreen", "Cannot navigate UP", "Top row reached")
         }
-        }
+    }
 
-        private fun navigateSeriesDown() {
+    private fun navigateSeriesDown() {
         val spanCount = 3
         val totalSeries = seriesAdapter.itemCount
-        if (selectedSeriesIndex + spanCount < totalSeries) {
-            selectedSeriesIndex += spanCount
+        val currentPosition = getCurrentFocusedSeriesPosition()
+        if (currentPosition + spanCount < totalSeries) {
+            selectedSeriesIndex = currentPosition + spanCount
             updateSeriesFocus()
+            ensureCorrectPanelFocus() // Ensure we stay in series panel
             KeyEventLogger.logFocusChange("SeriesScreen", "Series", selectedSeriesIndex)
         } else {
             // Bottom row handling
@@ -342,29 +405,18 @@ class SeriesScreen : AppCompatActivity() {
 
     
     private fun updateSeriesFocus() {
-        seriesRecyclerView.post {
-            try {
-                // Scroll to the selected position
-                seriesRecyclerView.smoothScrollToPosition(selectedSeriesIndex)
-                
-                // Wait a bit for scroll to complete, then set focus
-                seriesRecyclerView.postDelayed({
-                    val viewHolder = seriesRecyclerView.findViewHolderForAdapterPosition(selectedSeriesIndex)
-                    if (viewHolder != null) {
-                        viewHolder.itemView.requestFocus()
-                        KeyEventLogger.logFocusChange("SeriesScreen", "Series", selectedSeriesIndex)
-                    } else {
-                        // If viewHolder is null, try to scroll again
-                        seriesRecyclerView.scrollToPosition(selectedSeriesIndex)
-                        seriesRecyclerView.postDelayed({
-                            val retryViewHolder = seriesRecyclerView.findViewHolderForAdapterPosition(selectedSeriesIndex)
-                            retryViewHolder?.itemView?.requestFocus()
-                        }, 100)
-                    }
-                }, 150)
-            } catch (e: Exception) {
-                KeyEventLogger.logError("SeriesScreen", "Error updating series focus", e.message ?: "Unknown error")
+        try {
+            // Use fast scroll instead of smooth scroll for better performance
+            seriesRecyclerView.scrollToPosition(selectedSeriesIndex)
+            
+            // Set focus immediately without delays
+            val viewHolder = seriesRecyclerView.findViewHolderForAdapterPosition(selectedSeriesIndex)
+            if (viewHolder != null) {
+                viewHolder.itemView.requestFocus()
+                KeyEventLogger.logFocusChange("SeriesScreen", "Series", selectedSeriesIndex)
             }
+        } catch (e: Exception) {
+            KeyEventLogger.logError("SeriesScreen", "Error updating series focus", e.message ?: "Unknown error")
         }
     }
     
@@ -466,22 +518,63 @@ class SeriesScreen : AppCompatActivity() {
     }
     
     private fun updateCategoryVisualSelection() {
-        for (i in 0 until categoryListView.count) {
-            val view = categoryListView.getChildAt(i)
-            if (view != null) {
-                val card = view.findViewById<CardView>(R.id.categoryCard)
-                if (i == selectedCategoryIndex) {
-                    card.elevation = 24f
-                    card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.selection_primary))
-                    card.scaleX = 1.1f
-                    card.scaleY = 1.1f
-                } else {
-                    card.elevation = 8f
-                    card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.card_background))
-                    card.scaleX = 1.0f
-                    card.scaleY = 1.0f
-                }
+        // No need for manual visual selection - the focus background handles it automatically
+        // Just ensure the correct category is selected in the ListView
+        categoryListView.setSelection(selectedCategoryIndex)
+    }
+    
+    /**
+     * Gets the currently focused series position from RecyclerView
+     * This ensures we always get the actual focus position, not our counter
+     */
+    private fun getCurrentFocusedSeriesPosition(): Int {
+        val focusedView = seriesRecyclerView.focusedChild
+        if (focusedView != null) {
+            val position = seriesRecyclerView.getChildAdapterPosition(focusedView)
+            if (position != RecyclerView.NO_POSITION) {
+                // Update our counter to match the actual focus
+                selectedSeriesIndex = position
+                return position
             }
+        }
+        // Fallback to our counter if no focused child or position not found
+        return selectedSeriesIndex
+    }
+
+    /**
+     * Logs all drawable resources and their states for debugging
+     */
+    private fun logDrawableResources() {
+        android.util.Log.d("SeriesScreen", "🎨 === DRAWABLE RESOURCES DEBUG ===")
+        
+        try {
+            // Log the focus background drawable
+            val focusBackground = getDrawable(R.drawable.category_focus_background)
+            android.util.Log.d("SeriesScreen", "   🎯 Focus Background Drawable: $focusBackground")
+            
+            // Log the count badge background
+            val countBadgeBackground = getDrawable(R.drawable.count_badge_background)
+            android.util.Log.d("SeriesScreen", "   🔢 Count Badge Background: $countBadgeBackground")
+            
+            // Log the category focus glow
+            val categoryFocusGlow = getDrawable(R.drawable.category_focus_glow)
+            android.util.Log.d("SeriesScreen", "   ✨ Category Focus Glow: $categoryFocusGlow")
+            
+            // Log color resources
+            val categoryFocusColor = getColor(R.color.category_focus_color)
+            val categoryDefaultBg = getColor(R.color.category_default_bg)
+            val accentColor = getColor(R.color.accent_color)
+            
+            android.util.Log.d("SeriesScreen", "   🎨 Category Focus Color: #${String.format("%06X", 0xFFFFFF and categoryFocusColor)}")
+            android.util.Log.d("SeriesScreen", "   🎨 Category Default BG: #${String.format("%06X", 0xFFFFFF and categoryDefaultBg)}")
+            android.util.Log.d("SeriesScreen", "   🎨 Accent Color: #${String.format("%06X", 0xFFFFFF and accentColor)}")
+            
+            // Log the current theme
+            android.util.Log.d("SeriesScreen", "   🎭 Current Theme: ${theme.toString()}")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("SeriesScreen", "Error logging drawable resources: ${e.message}")
+            e.printStackTrace()
         }
     }
 }

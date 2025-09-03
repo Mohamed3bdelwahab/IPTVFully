@@ -81,7 +81,7 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     
     // Leanback for Android TV
-    implementation("androidx.leanback:leanback:1.1.0")
+    implementation("androidx.leanback:leanback:1.0.0")
     
     // Testing
     testImplementation(libs.junit)

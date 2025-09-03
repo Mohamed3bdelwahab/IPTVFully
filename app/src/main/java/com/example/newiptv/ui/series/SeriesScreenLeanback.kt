@@ -15,10 +15,11 @@ import com.example.newiptv.data.db.DatabaseProvider
 import com.example.newiptv.data.db.entities.CategoryEntity
 import com.example.newiptv.data.db.entities.ItemEntity
 import com.example.newiptv.data.repository.TvRepository
-import com.example.newiptv.ui.seriesinfo.SeriesInfoActivity
+import com.example.newiptv.ui.seriesinfo.SeriesInfoScreen
 import com.example.newiptv.utils.KeyEventLogger
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 class SeriesScreenLeanback : AppCompatActivity() {
 
@@ -196,7 +197,7 @@ class SeriesScreenLeanback : AppCompatActivity() {
                     if (isInCategoryPanel && selectedCategoryIndex < categories.size) {
                         // Switch to series panel
                         isInCategoryPanel = false
-                        KeyEventLogger.logNavigation("SeriesScreenLeanback", "Category → Series")
+                        KeyEventLogger.logNavigation("SeriesScreenLeanback", "Category → Series", "Category", "Series")
                         
                         // Load series for the selected category
                         val category = categories[selectedCategoryIndex]
@@ -211,7 +212,7 @@ class SeriesScreenLeanback : AppCompatActivity() {
                         // Switch back to category panel
                         isInCategoryPanel = true
                         categoryListView.requestFocus()
-                        KeyEventLogger.logNavigation("SeriesScreenLeanback", "Series → Category")
+                        KeyEventLogger.logNavigation("SeriesScreenLeanback", "Series → Category", "Series", "Category")
                         return true
                     }
                 }

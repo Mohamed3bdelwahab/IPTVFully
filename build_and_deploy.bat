@@ -42,7 +42,7 @@ timeout /t 2 /nobreak >nul
 
 REM Step 5: Connect to device
 echo 📱 Step 5: Connecting to device...
-set "deviceIP=192.168.8.20:5555"
+set "deviceIP=emulator-5554"
 "%adbPath%" connect %deviceIP%
 timeout /t 3 /nobreak >nul
 

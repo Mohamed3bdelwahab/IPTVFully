@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- 🎯 FOCUSED STATE - White Text on Blue Background -->
+    <item android:state_focused="true" android:color="@color/white" />
+    
+    <!-- 🎨 DEFAULT STATE - White Text on Accent Background -->
+    <item android:color="@color/white" />
+    
+</selector>

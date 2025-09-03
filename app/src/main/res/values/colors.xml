@@ -33,9 +33,25 @@
     <color name="accent_color">#FF40C4FF</color> <!-- Vibrant Light Blue -->
     
     <!-- Distinct Focus Colors - High Contrast -->
-    <color name="category_focus_color">#FF40C4FF</color> <!-- Vibrant Light Blue -->
+    <color name="category_focus_color">#FF00E5FF</color> <!-- Bright Electric Blue -->
     <color name="series_focus_color">#FF69F0AE</color> <!-- Bright Mint Green -->
     <color name="season_focus_color">#FFFFD740</color> <!-- Vibrant Yellow -->
     <color name="episode_focus_color">#FFFF5252</color> <!-- Bright Red -->
+    
+    <!-- Enhanced UI Colors -->
+    <color name="focus_border_white">#FFFFFFFF</color> <!-- Pure White for borders -->
+    <color name="focus_gradient_end">#FF01579B</color> <!-- Deep Blue for gradient -->
+    
+    <!-- Category Panel Colors -->
+    <color name="category_default_bg">#FF2A2A3A</color> <!-- Darker than panel -->
+    <color name="category_focus_glow">#FF40C4FF</color> <!-- Bright Blue Glow -->
+    
+    <!-- Focused Text Colors -->
+    <color name="category_focused_text">#FF4CAF50</color> <!-- Beautiful Green for focused text -->
+    
+    <!-- Missing Colors for Other Selectors -->
+    <color name="category_selected_color">#FF3F51B5</color> <!-- Indigo for selected category -->
+    <color name="series_selected_color">#FF4CAF50</color> <!-- Green for selected series -->
+    <color name="series_default_bg">#FF2A2A3A</color> <!-- Default series background -->
 
 </resources>

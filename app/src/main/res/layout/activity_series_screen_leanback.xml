@@ -96,7 +96,7 @@
             android:layout_height="wrap_content"
             android:text="Error loading series"
             android:textSize="18sp"
-            android:textColor="@color/red"
+            android:textColor="@color/episode_focus_color"
             android:gravity="center"
             android:visibility="gone" />
 

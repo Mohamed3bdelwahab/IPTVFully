@@ -24,8 +24,34 @@
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:gravity="center"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="16dp"
             android:fontFamily="sans-serif-medium" />
+
+        <!-- Filter Spinner - Moved above categories -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Filter:"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="4dp"
+                android:fontFamily="sans-serif" />
+
+            <Spinner
+                android:id="@+id/filterSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/spinner_background"
+                android:padding="8dp"
+                android:minHeight="40dp" />
+
+        </LinearLayout>
 
         <!-- Category List -->
         <ListView
@@ -49,34 +75,17 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Panel Title and Filter Controls -->
-        <LinearLayout
+        <!-- Panel Title -->
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Series"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:fontFamily="sans-serif-medium" />
-
-            <!-- Filter Spinner -->
-            <Spinner
-                android:id="@+id/filterSpinner"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/spinner_background"
-                android:padding="8dp"
-                android:minWidth="120dp" />
-
-        </LinearLayout>
+            android:text="Series"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"
+            android:fontFamily="sans-serif-medium" />
 
         <!-- Series Grid -->
         <FrameLayout

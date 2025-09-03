@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- 🎯 FOCUSED STATE - Green Text -->
+    <item android:state_focused="true" android:color="@color/category_focused_text" />
+    
+    <!-- 🎨 DEFAULT STATE - White Text -->
+    <item android:color="@color/text_primary" />
+    
+</selector>

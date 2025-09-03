@@ -23,6 +23,7 @@ import com.example.newiptv.player.VideoPlayerActivity
 import com.example.newiptv.utils.KeyEventLogger
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 
 class SeriesInfoScreen : AppCompatActivity() {
 
@@ -172,7 +173,10 @@ class SeriesInfoScreen : AppCompatActivity() {
         
         val runnable = object : Runnable {
             override fun run() {
-                if (backdropUrls.isNotEmpty()) {
+                // Check if activity is still valid
+                if (isFinishing || isDestroyed || backdropUrls.isEmpty()) return
+                
+                try {
                     // Fade out current image
                     backdropImageView.startAnimation(fadeOutAnimation)
                     
@@ -191,8 +195,12 @@ class SeriesInfoScreen : AppCompatActivity() {
                     // Move to next backdrop
                     currentBackdropIndex = (currentBackdropIndex + 1) % backdropUrls.size
                     
-                    // Schedule next animation
-                    backdropImageView.postDelayed(this, backdropAnimationDuration)
+                    // Schedule next animation only if activity is still valid
+                    if (!isFinishing && !isDestroyed) {
+                        backdropImageView.postDelayed(this, backdropAnimationDuration)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SeriesInfoScreen", "Error in backdrop animation: ${e.message}")
                 }
             }
         }
@@ -591,6 +599,20 @@ class SeriesInfoScreen : AppCompatActivity() {
                 intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_TITLE, "${seriesName} - ${episode.title}")
                 startActivity(intent)
             }
+        }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cleanup resources
+        lifecycleScope.cancel()
+        
+        // Stop backdrop animation
+        try {
+            backdropImageView.clearAnimation()
+            backdropImageView.removeCallbacks(null)
+        } catch (e: Exception) {
+            android.util.Log.e("SeriesInfoScreen", "Error cleaning up backdrop animation: ${e.message}")
         }
     }
 }
