@@ -48,6 +48,7 @@ class SeriesInfoScreen : AppCompatActivity() {
     private lateinit var seriesDescriptionView: TextView
 
     private lateinit var repository: TvRepository
+    private var contentType: String = "series"
     private var seriesId: String = ""
     private var seriesName: String = ""
     private var selectedSeasonIndex = 0
@@ -67,8 +68,15 @@ class SeriesInfoScreen : AppCompatActivity() {
         val database = DatabaseProvider.getDatabase(this)
         repository = TvRepository(database)
 
+        contentType = intent.getStringExtra("content_type") ?: "series"
         seriesId = intent.getStringExtra("series_id") ?: ""
         seriesName = intent.getStringExtra("series_name") ?: ""
+
+        // Update title based on content type
+        title = when (contentType) {
+            "movies" -> "Movie Info"
+            else -> "Series Info"
+        }
 
         initializeViews()
         setupAdapters()
@@ -98,6 +106,13 @@ class SeriesInfoScreen : AppCompatActivity() {
         // Set initial focus to season panel
         seasonListView.requestFocus()
         isInSeasonPanel = true
+        
+        // Update panel titles based on content type
+        if (contentType == "movies") {
+            findViewById<TextView>(R.id.seasonsTitleText).text = "Movie Details"
+            findViewById<TextView>(R.id.episodesTitleText).text = "Movie Info"
+            loadingText.text = "Loading movies..."
+        }
         selectedSeasonIndex = 0
         selectedEpisodeIndex = 0
         
@@ -254,9 +269,17 @@ class SeriesInfoScreen : AppCompatActivity() {
     }
     
     private fun updateSeasonsEpisodesCount(episodes: List<EpisodeEntity>) {
-        val totalSeasons = episodes.map { it.season }.distinct().size
-        val totalEpisodes = episodes.size
-        seriesCountView.text = "Seasons: $totalSeasons | Episodes: $totalEpisodes"
+        if (contentType == "movies") {
+            // For movies, just show total count
+            val countText = "Total Movies: ${episodes.size}"
+            seriesCountView.text = countText
+        } else {
+            // For series, show seasons and episodes
+            val totalSeasons = episodes.map { it.season }.distinct().size
+            val totalEpisodes = episodes.size
+            val countText = "Seasons: $totalSeasons | Episodes: $totalEpisodes"
+            seriesCountView.text = countText
+        }
     }
     
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -444,13 +467,13 @@ class SeriesInfoScreen : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 // Load series info first
-                val info = repository.getInfo(seriesId, "series")
+                val info = repository.getInfo(seriesId, contentType)
                 if (info != null) {
                     updateSeriesInfo(info)
                 }
                 
                 // Load episodes
-                repository.loadEpisodesWithSync("series", seriesId).collectLatest { result ->
+                repository.loadEpisodesWithSync(contentType, seriesId).collectLatest { result ->
                     result.fold(
                         onSuccess = { episodes ->
                             loadingText.visibility = View.GONE
@@ -458,21 +481,36 @@ class SeriesInfoScreen : AppCompatActivity() {
                             // Update seasons/episodes count
                             updateSeasonsEpisodesCount(episodes)
 
-                            // Group by season
-                            val seasonMap = episodes.groupBy { it.season }
-                            val seasons = seasonMap.keys.sorted().map { "Season $it" }
+                            if (contentType == "movies") {
+                                // For movies, treat each movie as a "season" for UI consistency
+                                val movieMap = episodes.groupBy { it.season }
+                                val movieSeasons = movieMap.keys.sorted().map { "Movie $it" }
 
-                            seasonAdapter = SeasonsAdapter(this@SeriesInfoScreen, seasons)
-                            seasonListView.adapter = seasonAdapter
+                                seasonAdapter = SeasonsAdapter(this@SeriesInfoScreen, movieSeasons)
+                                seasonListView.adapter = seasonAdapter
 
-                            // Auto-load first season if available
-                            if (seasons.isNotEmpty()) {
-                                loadEpisodesForSeason(seasonMap.keys.sorted().first(), seasonMap)
+                                // Auto-load first movie if available
+                                if (movieSeasons.isNotEmpty()) {
+                                    loadEpisodesForSeason(movieMap.keys.sorted().first(), movieMap)
+                                }
+                            } else {
+                                // For series, group by season
+                                val seasonMap = episodes.groupBy { it.season }
+                                val seasons = seasonMap.keys.sorted().map { "Season $it" }
+
+                                seasonAdapter = SeasonsAdapter(this@SeriesInfoScreen, seasons)
+                                seasonListView.adapter = seasonAdapter
+
+                                // Auto-load first season if available
+                                if (seasons.isNotEmpty()) {
+                                    loadEpisodesForSeason(seasonMap.keys.sorted().first(), seasonMap)
+                                }
                             }
                         },
                         onFailure = { e ->
                             loadingText.visibility = View.GONE
-                            errorText.text = "Failed to load episodes: ${e.message}"
+                            val contentTypeText = if (contentType == "movies") "movies" else "episodes"
+                        errorText.text = "Failed to load $contentTypeText: ${e.message}"
                             errorText.visibility = View.VISIBLE
                             Log.e("SeriesInfoScreen", "Failed to load episodes", e)
                         }
@@ -488,7 +526,8 @@ class SeriesInfoScreen : AppCompatActivity() {
     }
 
     private fun loadEpisodesForSeason(seasonNumber: Int, cached: Map<Int, List<EpisodeEntity>>? = null) {
-        android.util.Log.d("SeriesInfoScreen", "=== LOADING EPISODES FOR SEASON ===")
+        val contentTypeText = if (contentType == "movies") "MOVIE" else "EPISODES FOR SEASON"
+        android.util.Log.d("SeriesInfoScreen", "=== LOADING $contentTypeText ===")
         android.util.Log.d("SeriesInfoScreen", "Season Number: $seasonNumber")
         android.util.Log.d("SeriesInfoScreen", "Series ID: $seriesId")
         android.util.Log.d("SeriesInfoScreen", "Cached episodes available: ${cached != null}")
@@ -522,7 +561,8 @@ class SeriesInfoScreen : AppCompatActivity() {
                         }
                         
                         if (seasonEpisodes.isEmpty()) {
-                            android.util.Log.w("SeriesInfoScreen", "⚠️ No episodes found for season $seasonNumber")
+                            val contentTypeText = if (contentType == "movies") "movies" else "episodes"
+                            android.util.Log.w("SeriesInfoScreen", "⚠️ No $contentTypeText found for season $seasonNumber")
                         }
                     }
                 }
@@ -534,12 +574,13 @@ class SeriesInfoScreen : AppCompatActivity() {
     }
 
     private fun playEpisode(episode: EpisodeEntity) {
-        android.util.Log.d("SeriesInfoScreen", "=== PLAYING EPISODE ===")
-        android.util.Log.d("SeriesInfoScreen", "Episode Title: ${episode.title}")
-        android.util.Log.d("SeriesInfoScreen", "Episode Season: ${episode.season}")
-        android.util.Log.d("SeriesInfoScreen", "Episode DirectSource: ${episode.directSource}")
-        android.util.Log.d("SeriesInfoScreen", "Series Name: $seriesName")
-        android.util.Log.d("SeriesInfoScreen", "Series ID: $seriesId")
+        val contentTypeText = if (contentType == "movies") "MOVIE" else "EPISODE"
+        android.util.Log.d("SeriesInfoScreen", "=== PLAYING $contentTypeText ===")
+        android.util.Log.d("SeriesInfoScreen", "${contentTypeText.capitalize()} Title: ${episode.title}")
+        android.util.Log.d("SeriesInfoScreen", "${contentTypeText.capitalize()} Season: ${episode.season}")
+        android.util.Log.d("SeriesInfoScreen", "${contentTypeText.capitalize()} DirectSource: ${episode.directSource}")
+        android.util.Log.d("SeriesInfoScreen", "${if (contentType == "movies") "Movie" else "Series"} Name: $seriesName")
+        android.util.Log.d("SeriesInfoScreen", "${if (contentType == "movies") "Movie" else "Series"} ID: $seriesId")
         
         // Check if URL is valid
         if (episode.directSource.isNullOrEmpty()) {
@@ -575,12 +616,13 @@ class SeriesInfoScreen : AppCompatActivity() {
                     android.util.Log.d("SeriesInfoScreen", "Season episode $index: ${ep.title} (ID: ${ep.id})")
                 }
                 
-                val intent = Intent(this@SeriesInfoScreen, VideoPlayerActivity::class.java)
-                intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_URL, episode.directSource)
-                intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_TITLE, "${seriesName} - ${episode.title}")
-                intent.putExtra(VideoPlayerActivity.EXTRA_SERIES_ID, seriesId)
-                intent.putExtra(VideoPlayerActivity.EXTRA_SEASON_NUMBER, episode.season)
-                intent.putExtra(VideoPlayerActivity.EXTRA_EPISODE_INDEX, episodeIndex)
+                            val intent = Intent(this@SeriesInfoScreen, VideoPlayerActivity::class.java)
+            intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_URL, episode.directSource)
+            intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_TITLE, "${seriesName} - ${episode.title}")
+            intent.putExtra(VideoPlayerActivity.EXTRA_SERIES_ID, seriesId)
+            intent.putExtra(VideoPlayerActivity.EXTRA_SEASON_NUMBER, episode.season)
+            intent.putExtra(VideoPlayerActivity.EXTRA_EPISODE_INDEX, episodeIndex)
+            intent.putExtra("content_type", contentType)
                 
                 android.util.Log.d("SeriesInfoScreen", "Launching VideoPlayerActivity with:")
                 android.util.Log.d("SeriesInfoScreen", "  - Video URL: ${episode.directSource}")
@@ -597,6 +639,7 @@ class SeriesInfoScreen : AppCompatActivity() {
                 val intent = Intent(this@SeriesInfoScreen, VideoPlayerActivity::class.java)
                 intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_URL, episode.directSource)
                 intent.putExtra(VideoPlayerActivity.EXTRA_VIDEO_TITLE, "${seriesName} - ${episode.title}")
+                intent.putExtra("content_type", contentType)
                 startActivity(intent)
             }
         }

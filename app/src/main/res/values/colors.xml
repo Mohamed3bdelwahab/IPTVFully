@@ -49,9 +49,15 @@
     <!-- Focused Text Colors -->
     <color name="category_focused_text">#FF4CAF50</color> <!-- Beautiful Green for focused text -->
     
+    <!-- Movie Focus Colors -->
+    <color name="movie_focus_color">#FF64B5F6</color> <!-- Light Blue for movie focus -->
+    
     <!-- Missing Colors for Other Selectors -->
     <color name="category_selected_color">#FF3F51B5</color> <!-- Indigo for selected category -->
     <color name="series_selected_color">#FF4CAF50</color> <!-- Green for selected series -->
     <color name="series_default_bg">#FF2A2A3A</color> <!-- Default series background -->
+    
+    <!-- Error and Status Colors -->
+    <color name="error_color">#FFFF5252</color> <!-- Bright Red for errors -->
 
 </resources>

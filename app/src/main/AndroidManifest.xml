@@ -55,6 +55,20 @@
             android:theme="@style/Theme.NewIPTV.NoActionBar"
             android:screenOrientation="landscape" />
         
+        <!-- Movies Screen Activity -->
+        <activity
+            android:name=".ui.movies.MoviesScreen"
+            android:exported="false"
+            android:theme="@style/Theme.NewIPTV.NoActionBar"
+            android:screenOrientation="landscape" />
+            
+        <!-- Movie Info Screen Activity -->
+        <activity
+            android:name=".ui.movieinfo.MovieInfoScreen"
+            android:exported="false"
+            android:theme="@style/Theme.NewIPTV.NoActionBar"
+            android:screenOrientation="landscape" />
+        
         <!-- Video Player Activity -->
         <activity
             android:name=".player.VideoPlayerActivity"

@@ -1,0 +1,236 @@
+1- @http://hydraa.cc:2095/player_api.php?username=moh7amed819&password=150730&action=get_vod_streams   for get list of movies 
+
+[
+  {
+    "num": 1,
+    "name": "برشلونة & رايو فاييكانو - الدورى الأسبانى 31.08.2025",
+    "stream_type": "movie",
+    "stream_id": 590993,
+    "stream_icon": "https://mediafireupload.xyz/uploads/175669612231061.png",
+    "rating": "",
+    "rating_5based": 0,
+    "added": "1756696104",
+    "is_adult": "0",
+    "category_id": "243",
+    "container_extension": "mkv",
+    "custom_sid": "",
+    "direct_source": ""
+  },
+  {
+    "num": 2,
+    "name": "أرسنال & ليفربول - الدورى الإنجليزى 31.08.2025",
+    "stream_type": "movie",
+    "stream_id": 590958,
+    "stream_icon": "https://mediafireupload.xyz/uploads/175666350170331.png",
+    "rating": "",
+    "rating_5based": 0,
+    "added": "1756664462",
+    "is_adult": "0",
+    "category_id": "243",
+    "container_extension": "mkv",
+    "custom_sid": "",
+    "direct_source": ""
+  },]
+
+2- to get movie info 
+@http://aws85485.amazonedge.net//player_api.php?username=moh7amed819&password=150730&action=get_vod_info&vod_id=592368 
+{
+  "info": {
+    "kinopoisk_url": "https://www.themoviedb.org/movie/488223",
+    "name": "Dave Chappelle: Equanimity",
+    "o_name": "Dave Chappelle: Equanimity",
+    "cover_big": "http://hytv.xyz:80/images/4EaNffvPj5uTxRbFcmiTkor1lZW_big.jpg",
+    "movie_image": "http://hytv.xyz:80/images/4EaNffvPj5uTxRbFcmiTkor1lZW_big.jpg",
+    "releasedate": "2017-12-31",
+    "episode_run_time": 0,
+    "youtube_trailer": "cZ5AmFo4vbY",
+    "director": "Stan Lathan",
+    "actors": "Dave Chappelle",
+    "cast": "Dave Chappelle",
+    "description": "Comedy legend Dave Chappelle returns to his roots with an all-new stand-up special filmed at the Warner Theatre in Washington, D.C.",
+    "plot": "يعود أسطورة الكوميديا ​​ديف شابيل إلى جذوره بعرض كوميدي خاص جديد تم تصويره في مسرح وارنر في واشنطن العاصمة.",
+    "age": "16+",
+    "rating_mpaa": "R",
+    "rating_kinopoisk": 7.446,
+    "rating_count_kinopoisk": 232,
+    "country": "United States of America",
+    "genre": "Comedy",
+    "backdrop_path": [],
+    "tmdb_id": "488223",
+    "duration_secs": 3830,
+    "duration": "01:03:50",
+    "video": {
+      "index": 0,
+      "codec_name": "h264",
+      "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+      "profile": "High",
+      "codec_type": "video",
+      "codec_time_base": "21/1000",
+      "codec_tag_string": "[0][0][0][0]",
+      "codec_tag": "0x0000",
+      "width": 1920,
+      "height": 1080,
+      "coded_width": 1920,
+      "coded_height": 1088,
+      "has_b_frames": 2,
+      "sample_aspect_ratio": "1:1",
+      "display_aspect_ratio": "16:9",
+      "pix_fmt": "yuv420p",
+      "level": 40,
+      "chroma_location": "left",
+      "field_order": "progressive",
+      "refs": 1,
+      "is_avc": "true",
+      "nal_length_size": "4",
+      "r_frame_rate": "500/21",
+      "avg_frame_rate": "500/21",
+      "time_base": "1/1000",
+      "start_pts": 23,
+      "start_time": "0.023000",
+      "bits_per_raw_sample": "8",
+      "disposition": {
+        "default": 1,
+        "dub": 0,
+        "original": 0,
+        "comment": 0,
+        "lyrics": 0,
+        "karaoke": 0,
+        "forced": 0,
+        "hearing_impaired": 0,
+        "visual_impaired": 0,
+        "clean_effects": 0,
+        "attached_pic": 0,
+        "timed_thumbnails": 0
+      },
+      "tags": {
+        "BPS": "3962798",
+        "NUMBER_OF_FRAMES": "91843",
+        "NUMBER_OF_BYTES": "1897497864",
+        "_STATISTICS_WRITING_APP": "mkvmerge v61.0.0 ('So') 64-bit",
+        "_STATISTICS_WRITING_DATE_UTC": "2025-09-04 13:11:58",
+        "_STATISTICS_TAGS": "BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES",
+        "DURATION": "01:03:50.645000000"
+      }
+    },
+    "audio": {
+      "index": 1,
+      "codec_name": "aac",
+      "codec_long_name": "AAC (Advanced Audio Coding)",
+      "profile": "LC",
+      "codec_type": "audio",
+      "codec_time_base": "1/48000",
+      "codec_tag_string": "[0][0][0][0]",
+      "codec_tag": "0x0000",
+      "sample_fmt": "fltp",
+      "sample_rate": "48000",
+      "channels": 6,
+      "channel_layout": "5.1",
+      "bits_per_sample": 0,
+      "r_frame_rate": "0/0",
+      "avg_frame_rate": "0/0",
+      "time_base": "1/1000",
+      "start_pts": 0,
+      "start_time": "0.000000",
+      "disposition": {
+        "default": 0,
+        "dub": 0,
+        "original": 0,
+        "comment": 0,
+        "lyrics": 0,
+        "karaoke": 0,
+        "forced": 0,
+        "hearing_impaired": 0,
+        "visual_impaired": 0,
+        "clean_effects": 0,
+        "attached_pic": 0,
+        "timed_thumbnails": 0
+      },
+      "tags": {
+        "language": "eng",
+        "BPS": "271480",
+        "NUMBER_OF_FRAMES": "179570",
+        "NUMBER_OF_BYTES": "129999410",
+        "_STATISTICS_WRITING_APP": "mkvmerge v61.0.0 ('So') 64-bit",
+        "_STATISTICS_WRITING_DATE_UTC": "2025-09-04 13:11:58",
+        "_STATISTICS_TAGS": "BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES",
+        "DURATION": "01:03:50.826000000"
+      }
+    },
+    "bitrate": 4239,
+    "backdrop": "",
+    "rating": ""
+  },
+  "movie_data": {
+    "stream_id": 592368,
+    "name": "Dave Chappelle: Equanimity 2017",
+    "added": "1756997229",
+    "category_id": "148",
+    "container_extension": "mkv",
+    "custom_sid": "",
+    "direct_source": ""
+  }
+}
+
+3- TMDB_MOVIE_URL https://api.themoviedb.org/3/movie/488223?api_key=fed3065d290f59dee0b0433bc6ee9e39
+
+{
+  "adult": false,
+  "backdrop_path": "/wiRJsxQd5pFUmjw77IR9n0Lv0IX.jpg",
+  "belongs_to_collection": null,
+  "budget": 0,
+  "genres": [
+    {
+      "id": 35,
+      "name": "Comedy"
+    }
+  ],
+  "homepage": "https://www.netflix.com/title/80171759",
+  "id": 488223,
+  "imdb_id": "tt7806998",
+  "origin_country": [
+    "US"
+  ],
+  "original_language": "en",
+  "original_title": "Dave Chappelle: Equanimity",
+  "overview": "Comedy legend Dave Chappelle returns to his roots with an all-new stand-up special filmed at the Warner Theatre in Washington, D.C.",
+  "popularity": 0.2415,
+  "poster_path": "/4EaNffvPj5uTxRbFcmiTkor1lZW.jpg",
+  "production_companies": [],
+  "production_countries": [
+    {
+      "iso_3166_1": "US",
+      "name": "United States of America"
+    }
+  ],
+  "release_date": "2017-12-31",
+  "revenue": 0,
+  "runtime": 64,
+  "spoken_languages": [
+    {
+      "english_name": "English",
+      "iso_639_1": "en",
+      "name": "English"
+    }
+  ],
+  "status": "Released",
+  "tagline": "",
+  "title": "Dave Chappelle: Equanimity",
+  "video": false,
+  "vote_average": 7.446,
+  "vote_count": 232
+}
+
+4-  as poster   backdrop_path from TMDB_MOVIE_URL  reponse
+ https://image.tmdb.org/t/p/w500//{backdrop_path}X.jpg 
+
+
+5- getTmdbCast: get_tmdb_Playlist 488223 = id from TMDB_MOVIE_URL response 
+https://api.themoviedb.org/3/movie/488223/credits?api_key=fed3065d290f59dee0b0433bc6ee9e39
+
+6- getTmdbCast: trailer_url   488223 = id from TMDB_MOVIE_URL response
+https://api.themoviedb.org/3/movie/488223/videos?api_key=fed3065d290f59dee0b0433bc6ee9e39
+
+
+7- playvideo:  592368 = stream_id from  response 2- to get movie info 
+
+ http://aws85485.amazonedge.net//movie/moh7amed819/150730/592368.mkv

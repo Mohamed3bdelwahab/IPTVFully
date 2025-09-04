@@ -23,6 +23,15 @@ interface TvApi {
         @Query("category_id") categoryId: String? = null
     ): List<ApiItem>
 
+    // 🔹 Movie Items list (from get_vod_streams)
+    @GET("player_api.php")
+    suspend fun getMovieItems(
+        @Query("username") username: String,
+        @Query("password") password: String,
+        @Query("action") action: String, // "get_vod_streams"
+        @Query("category_id") categoryId: String? = null
+    ): List<ApiMovieItem>
+
     // 🔹 Detailed Info for one Series/Movie/Live stream
     @GET("player_api.php")
     suspend fun getInfo(
@@ -33,4 +42,13 @@ interface TvApi {
         @Query("vod_id") movieId: String? = null,
         @Query("stream_id") liveId: String? = null
     ): ApiInfoResponse
+
+    // 🔹 Movie Info (from get_vod_info)
+    @GET("player_api.php")
+    suspend fun getMovieInfo(
+        @Query("username") username: String,
+        @Query("password") password: String,
+        @Query("action") action: String, // "get_vod_info"
+        @Query("vod_id") movieId: String
+    ): ApiMovieInfoResponse
 }

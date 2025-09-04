@@ -17,6 +17,7 @@
 
         <!-- Panel Title -->
         <TextView
+            android:id="@+id/categoriesTitleText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Categories"
@@ -77,6 +78,7 @@
 
         <!-- Panel Title -->
         <TextView
+            android:id="@+id/contentTitleText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Series"

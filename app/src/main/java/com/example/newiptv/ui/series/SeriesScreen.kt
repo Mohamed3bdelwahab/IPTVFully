@@ -28,6 +28,10 @@ import com.example.newiptv.utils.KeyEventLogger
 
 class SeriesScreen : AppCompatActivity() {
 
+    // Content type - can be "series" or "movies"
+    private var contentType: String = "series"
+    private var screenTitle: String = "Series"
+    
     private lateinit var categoryListView: ListView
     private lateinit var seriesRecyclerView: RecyclerView
     private lateinit var seriesAdapter: SeriesAdapter
@@ -63,6 +67,16 @@ class SeriesScreen : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_series_screen)
 
+        // Get content type from intent (default to "series")
+        contentType = intent.getStringExtra("content_type") ?: "series"
+        screenTitle = when (contentType) {
+            "movies" -> "Movies"
+            else -> "Series"
+        }
+        
+        // Update screen title
+        title = screenTitle
+
         val database = DatabaseProvider.getDatabase(this)
         repository = TvRepository(database)
 
@@ -83,6 +97,10 @@ class SeriesScreen : AppCompatActivity() {
         loadingText = findViewById(R.id.loadingText)
         errorText = findViewById(R.id.errorText)
         filterSpinner = findViewById(R.id.filterSpinner)
+        
+        // Update titles based on content type
+        findViewById<TextView>(R.id.contentTitleText).text = screenTitle
+        findViewById<TextView>(R.id.categoriesTitleText).text = "${screenTitle} Categories"
         
         // Set initial focus to category panel
         categoryListView.requestFocus()
@@ -208,6 +226,7 @@ class SeriesScreen : AppCompatActivity() {
                 putExtra("series_name", series.name)
                 putExtra("series_category", categoryName)
                 putExtra("series_id", series.itemId)
+                putExtra("content_type", contentType)
             }
             startActivity(intent)
         }
@@ -437,6 +456,7 @@ class SeriesScreen : AppCompatActivity() {
                 putExtra("series_name", series.name)
                 putExtra("series_category", categoryName)
                 putExtra("series_id", series.itemId)
+                putExtra("content_type", contentType)
             }
             startActivity(intent)
         }
@@ -447,7 +467,7 @@ class SeriesScreen : AppCompatActivity() {
         errorText.visibility = View.GONE
 
         lifecycleScope.launch {
-            repository.loadCategoriesWithSync("series").collectLatest { result ->
+            repository.loadCategoriesWithSync(contentType).collectLatest { result ->
                 result.fold(
                     onSuccess = { categoryList ->
                         categories = categoryList
@@ -473,22 +493,22 @@ class SeriesScreen : AppCompatActivity() {
         loadingText.visibility = View.VISIBLE
         errorText.visibility = View.GONE
         
-        android.util.Log.d("SeriesScreen", "=== LOADING SERIES FOR CATEGORY ===")
+        android.util.Log.d("SeriesScreen", "=== LOADING ${screenTitle.uppercase()} FOR CATEGORY ===")
         android.util.Log.d("SeriesScreen", "Category ID: $categoryId")
         android.util.Log.d("SeriesScreen", "Selected Category Index: $selectedCategoryIndex")
 
         lifecycleScope.launch {
-            repository.loadItemsWithSync("series", categoryId).collectLatest { result ->
+            repository.loadItemsWithSync(contentType, categoryId).collectLatest { result ->
                 result.fold(
                     onSuccess = { seriesList ->
                         currentSeries = seriesList
-                        android.util.Log.d("SeriesScreen", "=== SERIES LOADED SUCCESSFULLY ===")
+                        android.util.Log.d("SeriesScreen", "=== ${screenTitle.uppercase()} LOADED SUCCESSFULLY ===")
                         android.util.Log.d("SeriesScreen", "Category ID: $categoryId")
-                        android.util.Log.d("SeriesScreen", "Total Series Loaded: ${seriesList.size}")
+                        android.util.Log.d("SeriesScreen", "Total ${screenTitle} Loaded: ${seriesList.size}")
                         
-                        // Log first few series to see their data
-                        seriesList.take(3).forEach { series ->
-                            android.util.Log.d("SeriesScreen", "Series: ${series.name}, ID: ${series.itemId}, Category: ${series.categoryId}")
+                        // Log first few items to see their data
+                        seriesList.take(3).forEach { item ->
+                            android.util.Log.d("SeriesScreen", "${screenTitle.capitalize()}: ${item.name}, ID: ${item.itemId}, Category: ${item.categoryId}")
                         }
                         
                         seriesAdapter.updateSeries(seriesList)
@@ -500,9 +520,9 @@ class SeriesScreen : AppCompatActivity() {
                     },
                     onFailure = { exception ->
                         loadingText.visibility = View.GONE
-                        errorText.text = "Failed to load series: ${exception.message}"
+                        errorText.text = "Failed to load ${contentType}: ${exception.message}"
                         errorText.visibility = View.VISIBLE
-                        android.util.Log.e("SeriesScreen", "=== FAILED TO LOAD SERIES ===")
+                        android.util.Log.e("SeriesScreen", "=== FAILED TO LOAD ${screenTitle.uppercase()} ===")
                         android.util.Log.e("SeriesScreen", "Category ID: $categoryId")
                         android.util.Log.e("SeriesScreen", "Error: ${exception.message}")
                         exception.printStackTrace()

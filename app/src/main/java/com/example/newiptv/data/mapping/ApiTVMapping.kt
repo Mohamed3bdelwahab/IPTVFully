@@ -33,10 +33,13 @@ object ApiTVMapping {
             else -> null
         }
 
+        // Use cover field for all content types (Series screen pattern)
+        val coverImage = api.cover
+
         return ItemEntity(
             itemId = itemId,
             name = api.name,
-            cover = api.cover,
+            cover = coverImage,
             plot = api.plot,
             cast = api.cast,
             director = api.director,
@@ -50,6 +53,28 @@ object ApiTVMapping {
             episodeRunTime = api.episode_run_time,
             categoryId = categoryId ?: api.category_id, // ✅ ensure correct category
             type = type
+        )
+    }
+
+    // 🔹 Map Movie Item (from get_vod_streams)
+    fun mapMovieItem(api: ApiMovieItem, categoryId: String): ItemEntity {
+        return ItemEntity(
+            itemId = api.stream_id.toString(),
+            name = api.name,
+            cover = api.stream_icon, // ✅ Movies use stream_icon
+            plot = null, // Movies don't have plot in stream list
+            cast = null,
+            director = null,
+            genre = null,
+            releaseDate = null,
+            lastModified = api.added,
+            rating = api.rating,
+            rating5Based = api.rating_5based,
+            backdropPath = null,
+            youtubeTrailer = null,
+            episodeRunTime = null,
+            categoryId = categoryId,
+            type = "movie"
         )
     }
 
@@ -78,6 +103,34 @@ object ApiTVMapping {
             episodeRunTime = api.episode_run_time,
             categoryId = api.category_id ?: "",
             type = type
+        )
+    }
+
+    // 🔹 Map Movie Info (from get_vod_info)
+    fun mapMovieInfo(api: ApiMovieInfoDetail, itemId: String, categoryId: String): InfoEntity {
+        val backdropPath = when (api.backdrop_path) {
+            is List<*> -> gson.toJson(api.backdrop_path.filterIsInstance<String>())
+            is String -> api.backdrop_path
+            else -> null
+        }
+
+        return InfoEntity(
+            itemId = itemId,
+            name = api.name ?: "",
+            cover = api.cover_big ?: api.movie_image,
+            plot = api.plot ?: api.description,
+            cast = api.cast ?: api.actors,
+            director = api.director,
+            genre = api.genre,
+            releaseDate = api.releasedate,
+            lastModified = null,
+            rating = api.rating,
+            rating5Based = api.rating_kinopoisk,
+            backdropPath = backdropPath,
+            youtubeTrailer = api.youtube_trailer,
+            episodeRunTime = api.episode_run_time?.toString(),
+            categoryId = categoryId,
+            type = "movie"
         )
     }
 

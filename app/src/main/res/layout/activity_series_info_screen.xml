@@ -213,10 +213,11 @@
                 android:layout_marginEnd="8dp">
 
                 <!-- Panel Title -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Seasons"
+                            <TextView
+                android:id="@+id/seasonsTitleText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Seasons"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
@@ -249,10 +250,11 @@
                 android:layout_marginStart="8dp">
 
                 <!-- Panel Title -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Episodes"
+                            <TextView
+                android:id="@+id/episodesTitleText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Episodes"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"

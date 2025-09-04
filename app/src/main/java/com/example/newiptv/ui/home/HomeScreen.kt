@@ -12,6 +12,7 @@ import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import com.example.newiptv.R
 import com.example.newiptv.ui.series.SeriesScreen
+import com.example.newiptv.ui.movies.MoviesScreen
 
 class HomeScreen : AppCompatActivity() {
 
@@ -207,12 +208,14 @@ class HomeScreen : AppCompatActivity() {
     private fun navigateToSection(index: Int) {
         when (index) {
             0 -> { // Series
-                val intent = Intent(this, SeriesScreen::class.java)
+                val intent = Intent(this, SeriesScreen::class.java).apply {
+                    putExtra("content_type", "series")
+                }
                 startActivity(intent)
             }
             1 -> { // Movies
-                // TODO: Implement Movies screen
-                showComingSoon("Movies")
+                val intent = Intent(this, MoviesScreen::class.java)
+                startActivity(intent)
             }
             2 -> { // Live TV
                 // TODO: Implement Live TV screen

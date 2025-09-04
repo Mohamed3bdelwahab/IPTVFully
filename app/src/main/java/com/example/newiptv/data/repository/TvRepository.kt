@@ -23,7 +23,12 @@ class TvRepository(
     // 🔹 Categories
     // ------------------------------------------------
     suspend fun syncCategories(type: String) {
-        val action = "get_${type}_categories"
+        val action = when (type) {
+            "series" -> "get_series_categories"
+            "movie" -> "get_vod_categories"
+            "live" -> "get_live_categories"
+            else -> "get_series_categories"
+        }
         try {
             val apiCategories = TvApiClient.api.getCategories(username, password, action)
             val entities = apiCategories.map { ApiTVMapping.mapCategory(it, type) }
@@ -56,11 +61,17 @@ class TvRepository(
         try {
             Log.d("TvRepository", "Fetching items for category=$categoryId type=$type")
 
-            // ✅ Call API
-            val apiItems = TvApiClient.api.getItems(username, password, action, categoryId)
-
-            // ✅ Always attach the correct categoryId to items
-            val entities = apiItems.map { ApiTVMapping.mapItem(it, type, categoryId) }
+            // ✅ Call appropriate API based on content type
+            val entities = when (type) {
+                "movie" -> {
+                    val apiMovieItems = TvApiClient.api.getMovieItems(username, password, action, categoryId)
+                    apiMovieItems.map { ApiTVMapping.mapMovieItem(it, categoryId) }
+                }
+                else -> {
+                    val apiItems = TvApiClient.api.getItems(username, password, action, categoryId)
+                    apiItems.map { ApiTVMapping.mapItem(it, type, categoryId) }
+                }
+            }
 
             // ✅ Clear + insert to DB
             itemDao.deleteItemsByCategory(categoryId, type)
@@ -89,43 +100,63 @@ class TvRepository(
     }
 
     try {
-        val apiInfo = TvApiClient.api.getInfo(
-            username = username,
-            password = password,
-            action = action,
-            seriesId = if (type == "series") itemId else null,
-            movieId = if (type == "movie") itemId else null,
-            liveId = if (type == "live") itemId else null
-        )
+        when (type) {
+            "movie" -> {
+                // ✅ Handle movie info separately
+                val apiMovieInfo = TvApiClient.api.getMovieInfo(username, password, action, itemId)
+                
+                // ✅ Get category ID from movie stream data
+                val categoryId = apiMovieInfo.movie_data?.category_id ?: ""
+                
+                // ✅ Save movie info metadata
+                apiMovieInfo.info?.let { info ->
+                    val entity = ApiTVMapping.mapMovieInfo(info, itemId, categoryId)
+                    infoDao.deleteInfo(itemId, type)
+                    infoDao.insert(entity)
+                    Log.d("TvRepository", "Saved movie info for item=$itemId category=$categoryId")
+                }
+            }
+            else -> {
+                // ✅ Handle series/live info
+                val apiInfo = TvApiClient.api.getInfo(
+                    username = username,
+                    password = password,
+                    action = action,
+                    seriesId = if (type == "series") itemId else null,
+                    movieId = if (type == "movie") itemId else null,
+                    liveId = if (type == "live") itemId else null
+                )
 
-        // ✅ Save info metadata
-        apiInfo.info?.let { info ->
-            val entity = ApiTVMapping.mapInfo(info, itemId, type)
-            infoDao.deleteInfo(itemId, type)
-            infoDao.insert(entity)
-            Log.d("TvRepository", "Saved info for item=$itemId type=$type")
-        }
+                // ✅ Save info metadata
+                apiInfo.info?.let { info ->
+                    val entity = ApiTVMapping.mapInfo(info, itemId, type)
+                    infoDao.deleteInfo(itemId, type)
+                    infoDao.insert(entity)
+                    Log.d("TvRepository", "Saved info for item=$itemId type=$type")
+                }
 
-        // ✅ Save seasons + episodes (series only)
-        if (type == "series" && apiInfo.episodes != null) {
-            val seasonWithEpisodes = ApiTVMapping.mapSeasonsAndEpisodes(apiInfo.episodes, itemId)
+                // ✅ Save seasons + episodes (series only)
+                if (type == "series" && apiInfo.episodes != null) {
+                    val seasonWithEpisodes = ApiTVMapping.mapSeasonsAndEpisodes(apiInfo.episodes, itemId)
 
-            // Clear & insert seasons
-            database.seasonDao().deleteSeasonsBySeries(itemId)
-            database.seasonDao().insertAll(seasonWithEpisodes.seasons)
+                    // Clear & insert seasons
+                    database.seasonDao().deleteSeasonsBySeries(itemId)
+                    database.seasonDao().insertAll(seasonWithEpisodes.seasons)
 
-            // Clear & insert episodes
-            episodeDao.deleteEpisodesByItemId(itemId)
-            episodeDao.insertAll(seasonWithEpisodes.episodes)
+                    // Clear & insert episodes
+                    episodeDao.deleteEpisodesByItemId(itemId)
+                    episodeDao.insertAll(seasonWithEpisodes.episodes)
 
-            Log.d(
-                "TvRepository",
-                "Saved ${seasonWithEpisodes.seasons.size} seasons & ${seasonWithEpisodes.episodes.size} episodes for series=$itemId"
-            )
-            
-            // Log first few episodes to check directSource
-            seasonWithEpisodes.episodes.take(3).forEach { episode ->
-                Log.d("TvRepository", "Episode: ${episode.title}, DirectSource: ${episode.directSource}")
+                    Log.d(
+                        "TvRepository",
+                        "Saved ${seasonWithEpisodes.seasons.size} seasons & ${seasonWithEpisodes.episodes.size} episodes for series=$itemId"
+                    )
+                    
+                    // Log first few episodes to check directSource
+                    seasonWithEpisodes.episodes.take(3).forEach { episode ->
+                        Log.d("TvRepository", "Episode: ${episode.title}, DirectSource: ${episode.directSource}")
+                    }
+                }
             }
         }
     } catch (e: Exception) {

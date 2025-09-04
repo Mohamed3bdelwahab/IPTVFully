@@ -18,9 +18,11 @@ object DatabaseProvider {
             .addMigrations(
                 AppDatabase.MIGRATION_1_2,
                 AppDatabase.MIGRATION_2_3,
-                AppDatabase.MIGRATION_3_4 // fix schema integrity
+                AppDatabase.MIGRATION_3_4, // fix schema integrity
+                AppDatabase.MIGRATION_4_5, // add movie entities
+                AppDatabase.MIGRATION_5_6  // fix schema integrity v2
             )
-            .fallbackToDestructiveMigrationOnDowngrade() // only destructive on downgrade
+            .fallbackToDestructiveMigration() // force fresh database on schema mismatch
             .build()
             INSTANCE = instance
             instance
