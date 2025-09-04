@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
@@ -29,6 +30,12 @@ class IPTVVideoPlayer(
         private const val BUFFER_SIZE = 50 * 1024 * 1024 // 50MB buffer
         private const val CONNECT_TIMEOUT = 30L
         private const val READ_TIMEOUT = 30L
+        
+        // Enhanced buffer configuration
+        private const val MIN_BUFFER_MS = 30_000 // 30 seconds minimum buffer
+        private const val MAX_BUFFER_MS = 120_000 // 120 seconds maximum buffer (increased)
+        private const val BUFFER_FOR_PLAYBACK_MS = 2_500 // 2.5 seconds for playback start
+        private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 5_000 // 5 seconds after rebuffer
     }
     
     private var exoPlayer: ExoPlayer? = null
@@ -41,6 +48,7 @@ class IPTVVideoPlayer(
         fun onPlaybackStateChanged(isPlaying: Boolean)
         fun onProgressChanged(position: Long, duration: Long)
         fun onBufferingChanged(isBuffering: Boolean)
+        fun onVideoEnded()
     }
     
     init {
@@ -61,10 +69,26 @@ class IPTVVideoPlayer(
             // Create media source factory
             val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
             
-            // Create ExoPlayer with custom configuration
+            // Create enhanced load control for better buffering
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    MIN_BUFFER_MS,
+                    MAX_BUFFER_MS,
+                    BUFFER_FOR_PLAYBACK_MS,
+                    BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                )
+                .setTargetBufferBytes(BUFFER_SIZE)
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .build()
+            
+            // Create ExoPlayer with enhanced configuration
             exoPlayer = ExoPlayer.Builder(context)
                 .setMediaSourceFactory(mediaSourceFactory)
+                .setLoadControl(loadControl)
                 .build()
+            
+            Log.d(TAG, "ExoPlayer initialized with enhanced buffer: ${BUFFER_SIZE / (1024 * 1024)}MB, " +
+                    "Min buffer: ${MIN_BUFFER_MS / 1000}s, Max buffer: ${MAX_BUFFER_MS / 1000}s")
             
             // Set up player listeners
             exoPlayer?.addListener(object : Player.Listener {
@@ -80,6 +104,7 @@ class IPTVVideoPlayer(
                         }
                         Player.STATE_ENDED -> {
                             playerListener?.onPlaybackStateChanged(false)
+                            playerListener?.onVideoEnded()
                         }
                         Player.STATE_IDLE -> {
                             // Player is idle
