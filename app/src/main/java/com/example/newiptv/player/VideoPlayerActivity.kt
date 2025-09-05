@@ -55,10 +55,14 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         const val EXTRA_EPISODE_INDEX = "episode_index"
         private const val CONTROLS_HIDE_DELAY = 3000L // 3 seconds
         private const val PROGRESS_UPDATE_INTERVAL = 1000L // 1 second
+        private const val REQUEST_OVERLAY_PERMISSION = 1001
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Check and request overlay permission
+        checkOverlayPermission()
         
         // Set immersive mode
         setupImmersiveMode()
@@ -726,6 +730,19 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     }
     
     private fun showSpeedMenu() {
+        // Check if overlay permission is granted
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                android.util.Log.w("VideoPlayerActivity", "❌ Cannot show speed menu: overlay permission not granted")
+                android.widget.Toast.makeText(
+                    this,
+                    "Please grant overlay permission to use speed menu",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+        }
+        
         if (speedOverlayMenu == null) {
             speedOverlayMenu = SpeedOverlayMenu(
                 context = this,
@@ -744,6 +761,19 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     }
     
     private fun showPlaylistMenu() {
+        // Check if overlay permission is granted
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                android.util.Log.w("VideoPlayerActivity", "❌ Cannot show playlist menu: overlay permission not granted")
+                android.widget.Toast.makeText(
+                    this,
+                    "Please grant overlay permission to use playlist menu",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+        }
+        
         android.util.Log.d("VideoPlayerActivity", "=== SHOWING PLAYLIST MENU ===")
         android.util.Log.d("VideoPlayerActivity", "Episodes available: ${episodes.size}")
         android.util.Log.d("VideoPlayerActivity", "Current episode index: $currentEpisodeIndex")
@@ -985,6 +1015,56 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             }
         } catch (e: Exception) {
             android.util.Log.e("VideoPlayerActivity", "Failed to save current episode position", e)
+        }
+    }
+    
+    /**
+     * Check and request overlay permission for system alert windows
+     */
+    private fun checkOverlayPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                android.util.Log.d("VideoPlayerActivity", "🔒 Overlay permission not granted, requesting...")
+                requestOverlayPermission()
+            } else {
+                android.util.Log.d("VideoPlayerActivity", "✅ Overlay permission already granted")
+            }
+        }
+    }
+    
+    /**
+     * Request overlay permission from user
+     */
+    private fun requestOverlayPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val intent = android.content.Intent(
+                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:$packageName")
+            )
+            startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION)
+        }
+    }
+    
+    /**
+     * Handle permission request result
+     */
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                if (android.provider.Settings.canDrawOverlays(this)) {
+                    android.util.Log.d("VideoPlayerActivity", "✅ Overlay permission granted by user")
+                } else {
+                    android.util.Log.w("VideoPlayerActivity", "❌ Overlay permission denied by user")
+                    // Show a message to user about the permission being required
+                    android.widget.Toast.makeText(
+                        this,
+                        "Overlay permission is required for speed and playlist menus. Please grant permission in settings.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
 
