@@ -405,10 +405,9 @@ class IPTVVideoPlayer(
                     val trackGroup = audioTracks[0]
                     if (trackGroup.length > 0) {
                         val trackSelectionOverride = TrackSelectionOverride(trackGroup.mediaTrackGroup, listOf(0))
-                        trackSelector?.setParameters(
-                            trackSelector?.buildUponParameters()
-                                ?.setOverrideForType(trackSelectionOverride)
-                        )
+                        val parametersBuilder = trackSelector?.buildUponParameters()
+                        parametersBuilder?.setOverrideForType(trackSelectionOverride)
+                        trackSelector?.setParameters(parametersBuilder)
                         Log.d(TAG, "🔊 Selected audio track: ${trackGroup.mediaTrackGroup.getFormat(0).codecs}")
                     }
                 }
