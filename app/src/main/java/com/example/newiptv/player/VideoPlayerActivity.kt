@@ -27,15 +27,12 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private lateinit var binding: ActivityVideoPlayerBinding
     private lateinit var videoPlayer: IPTVVideoPlayer
     private lateinit var tvRemoteHandler: TVRemoteHandler
-    private lateinit var positionTracker: PositionTracker
-    private lateinit var playlistManager: PlaylistManager
     private var speedOverlayMenu: SpeedOverlayMenu? = null
     private var playlistOverlayMenu: PlaylistOverlayMenu? = null
     private var isFullscreen = false
     private var isControlsVisible = true
     private val handler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { hideControls() }
-    private val coroutineScope = CoroutineScope(Dispatchers.Main)
     
     // Episode navigation data
     private var seriesId: String? = null
@@ -43,22 +40,12 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private var currentEpisodeIndex: Int = 0
     private var episodes: List<com.example.newiptv.data.db.entities.EpisodeEntity> = emptyList()
     
-    // Content tracking for position memory
-    private var currentContentId: String? = null
-    private var currentContentType: String? = null
-    private var currentVideoTitle: String? = null
-    private var currentVideoUrl: String? = null
-    private var isAutoPlayEnabled: Boolean = true
-    
     companion object {
         const val EXTRA_VIDEO_URL = "video_url"
         const val EXTRA_VIDEO_TITLE = "video_title"
         const val EXTRA_SERIES_ID = "series_id"
         const val EXTRA_SEASON_NUMBER = "season_number"
         const val EXTRA_EPISODE_INDEX = "episode_index"
-        const val EXTRA_CONTENT_ID = "content_id"
-        const val EXTRA_CONTENT_TYPE = "content_type"
-        const val EXTRA_MOVIE_ID = "movie_id"
         private const val CONTROLS_HIDE_DELAY = 3000L // 3 seconds
         private const val PROGRESS_UPDATE_INTERVAL = 1000L // 1 second
     }
@@ -83,36 +70,6 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private fun setupPlayer() {
         // Initialize video player
         videoPlayer = IPTVVideoPlayer(this, this)
-        
-        // Initialize position tracker
-        positionTracker = PositionTracker(this, videoPlayer)
-        
-        // Initialize playlist manager
-        playlistManager = PlaylistManager(this)
-        playlistManager.setAutoPlayListener(object : PlaylistManager.AutoPlayListener {
-            override fun onPlayNext(
-                contentId: String,
-                contentType: String,
-                title: String,
-                url: String?,
-                seriesId: String?,
-                seasonNumber: Int?,
-                episodeIndex: Int?
-            ) {
-                if (isAutoPlayEnabled) {
-                    playNextContent(contentId, contentType, title, url, seriesId, seasonNumber, episodeIndex)
-                }
-            }
-            
-            override fun onPlaylistComplete() {
-                // Handle playlist completion
-                showMessage("Playlist completed")
-            }
-            
-            override fun onAutoPlayCancelled(reason: String) {
-                showMessage("Auto-play cancelled: $reason")
-            }
-        })
         
         // Bind ExoPlayer to PlayerView
         videoPlayer.getPlayer()?.let { player ->
@@ -275,24 +232,12 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         val videoUrl = intent.getStringExtra(EXTRA_VIDEO_URL)
         val videoTitle = intent.getStringExtra(EXTRA_VIDEO_TITLE)
         
-        // Extract content tracking data
-        currentContentId = intent.getStringExtra(EXTRA_CONTENT_ID)
-        currentContentType = intent.getStringExtra(EXTRA_CONTENT_TYPE)
-        val movieId = intent.getStringExtra(EXTRA_MOVIE_ID)
-        
         // Extract episode navigation data
         seriesId = intent.getStringExtra(EXTRA_SERIES_ID)
         seasonNumber = intent.getIntExtra(EXTRA_SEASON_NUMBER, 1)
         currentEpisodeIndex = intent.getIntExtra(EXTRA_EPISODE_INDEX, 0)
         
-        // Store current video data
-        currentVideoTitle = videoTitle
-        currentVideoUrl = videoUrl
-        
-        android.util.Log.d("VideoPlayerActivity", "=== LOADING VIDEO WITH ENHANCEMENTS ===")
-        android.util.Log.d("VideoPlayerActivity", "Content ID: $currentContentId")
-        android.util.Log.d("VideoPlayerActivity", "Content Type: $currentContentType")
-        android.util.Log.d("VideoPlayerActivity", "Movie ID: $movieId")
+        android.util.Log.d("VideoPlayerActivity", "=== LOADING VIDEO ===")
         android.util.Log.d("VideoPlayerActivity", "Series ID: $seriesId")
         android.util.Log.d("VideoPlayerActivity", "Season Number: $seasonNumber")
         android.util.Log.d("VideoPlayerActivity", "Episode Index: $currentEpisodeIndex")
@@ -301,154 +246,17 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         
         if (videoUrl != null) {
             binding.tvTitle.text = videoTitle ?: "Video Player"
+            videoPlayer.loadVideo(videoUrl)
             
-            // Determine content ID and type if not provided
-            if (currentContentId == null) {
-                currentContentId = when {
-                    !seriesId.isNullOrEmpty() -> "${seriesId}_s${seasonNumber}_ep${currentEpisodeIndex}"
-                    !movieId.isNullOrEmpty() -> movieId
-                    else -> videoUrl.hashCode().toString()
-                }
-            }
-            
-            if (currentContentType == null) {
-                currentContentType = when {
-                    !seriesId.isNullOrEmpty() -> PlaylistManager.CONTENT_TYPE_EPISODE
-                    !movieId.isNullOrEmpty() -> PlaylistManager.CONTENT_TYPE_MOVIE
-                    else -> "video"
-                }
-            }
-            
-            // Load video with position restoration
-            loadVideoWithPositionRestore(videoUrl, currentContentId!!, currentContentType!!)
-            
-            // Initialize playlist for series
+            // Load episodes for navigation if series ID is available
             if (seriesId != null) {
                 loadEpisodesForNavigation()
-                initializeSeriesPlaylist()
             }
-            
         } else {
             // Load test video
             val testUrl = "http://aws85485.amazonedge.net/series/moh7amed819/150730/172237.mkv"
-            currentContentId = "test_video"
-            currentContentType = "video"
             binding.tvTitle.text = "Test Video (MKV)"
-            loadVideoWithPositionRestore(testUrl, currentContentId!!, currentContentType!!)
-        }
-    }
-    
-    /**
-     * Load video with position restoration
-     */
-    private fun loadVideoWithPositionRestore(videoUrl: String, contentId: String, contentType: String) {
-        coroutineScope.launch {
-            try {
-                // Check for saved position
-                val savedPosition = positionTracker.getSavedPosition(contentId, contentType)
-                
-                // Load the video
-                videoPlayer.loadVideo(videoUrl)
-                
-                // Start position tracking
-                positionTracker.startTracking(
-                    contentId = contentId,
-                    contentType = contentType,
-                    seriesId = seriesId,
-                    seasonNumber = seasonNumber,
-                    episodeNumber = if (contentType == PlaylistManager.CONTENT_TYPE_EPISODE) currentEpisodeIndex else null
-                )
-                
-                // Restore position if available
-                savedPosition?.let { position ->
-                    android.util.Log.d("VideoPlayerActivity", "Restoring position: ${position}ms for $contentType: $contentId")
-                    // Wait a bit for the player to be ready
-                    kotlinx.coroutines.delay(1000)
-                    if (videoPlayer.isReady()) {
-                        videoPlayer.seekTo(position)
-                        showMessage("Resumed from ${formatTime(position)}")
-                    }
-                }
-                
-            } catch (e: Exception) {
-                android.util.Log.e("VideoPlayerActivity", "Error loading video with position restore", e)
-                // Fallback to normal loading
-                videoPlayer.loadVideo(videoUrl)
-            }
-        }
-    }
-    
-    /**
-     * Initialize series playlist for auto-play
-     */
-    private fun initializeSeriesPlaylist() {
-        seriesId?.let { id ->
-            coroutineScope.launch {
-                try {
-                    playlistManager.initializeSeriesPlaylist(
-                        seriesId = id,
-                        seasonNumber = seasonNumber,
-                        startEpisodeIndex = currentEpisodeIndex
-                    )
-                    android.util.Log.d("VideoPlayerActivity", "Series playlist initialized for auto-play")
-                } catch (e: Exception) {
-                    android.util.Log.e("VideoPlayerActivity", "Error initializing series playlist", e)
-                }
-            }
-        }
-    }
-    
-    /**
-     * Play next content (used by auto-play)
-     */
-    private fun playNextContent(
-        contentId: String,
-        contentType: String,
-        title: String,
-        url: String?,
-        seriesId: String?,
-        seasonNumber: Int?,
-        episodeIndex: Int?
-    ) {
-        coroutineScope.launch {
-            try {
-                android.util.Log.d("VideoPlayerActivity", "Auto-playing next content: $title")
-                
-                // Stop current tracking
-                positionTracker.stopTracking()
-                
-                // Update current content info
-                currentContentId = contentId
-                currentContentType = contentType
-                currentVideoTitle = title
-                this@VideoPlayerActivity.seriesId = seriesId
-                if (seasonNumber != null) this@VideoPlayerActivity.seasonNumber = seasonNumber
-                if (episodeIndex != null) currentEpisodeIndex = episodeIndex
-                
-                // Update UI
-                binding.tvTitle.text = title
-                
-                // Load next video
-                url?.let { videoUrl ->
-                    loadVideoWithPositionRestore(videoUrl, contentId, contentType)
-                } ?: run {
-                    android.util.Log.e("VideoPlayerActivity", "No URL provided for next content")
-                }
-                
-            } catch (e: Exception) {
-                android.util.Log.e("VideoPlayerActivity", "Error playing next content", e)
-            }
-        }
-    }
-    
-
-    
-    /**
-     * Show message to user
-     */
-    private fun showMessage(message: String) {
-        runOnUiThread {
-            android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
+            videoPlayer.loadVideo(testUrl)
         }
     }
     
@@ -625,29 +433,6 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         }
     }
     
-    override fun onVideoEnded() {
-        android.util.Log.d("VideoPlayerActivity", "Video ended, checking for auto-play next")
-        runOnUiThread {
-            if (isAutoPlayEnabled) {
-                coroutineScope.launch {
-                    try {
-                        val hasNext = playlistManager.hasNextItem()
-                        if (hasNext) {
-                            android.util.Log.d("VideoPlayerActivity", "Auto-playing next item...")
-                            showMessage("Playing next...")
-                            playlistManager.triggerAutoPlayNext()
-                        } else {
-                            android.util.Log.d("VideoPlayerActivity", "No next item available")
-                            showMessage("Playlist completed")
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.e("VideoPlayerActivity", "Error handling video ended", e)
-                    }
-                }
-            }
-        }
-    }
-    
     override fun onResume() {
         super.onResume()
         videoPlayer.play()
@@ -656,23 +441,10 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     override fun onPause() {
         super.onPause()
         videoPlayer.pause()
-        // Save current position when pausing
-        if (::positionTracker.isInitialized) {
-            positionTracker.saveCurrentPosition()
-        }
     }
     
     override fun onDestroy() {
         super.onDestroy()
-        
-        // Stop position tracking and clean up
-        if (::positionTracker.isInitialized) {
-            positionTracker.stopTracking()
-        }
-        if (::playlistManager.isInitialized) {
-            playlistManager.clearPlaylist()
-        }
-        
         handler.removeCallbacks(hideControlsRunnable)
         speedOverlayMenu?.destroy()
         speedOverlayMenu = null
@@ -680,8 +452,6 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         playlistOverlayMenu = null
         tvRemoteHandler.destroy()
         videoPlayer.release()
-        
-        android.util.Log.d("VideoPlayerActivity", "VideoPlayerActivity destroyed with cleanup")
     }
     
     override fun onBackPressed() {

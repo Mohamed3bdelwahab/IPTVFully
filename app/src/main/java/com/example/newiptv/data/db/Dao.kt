@@ -69,39 +69,3 @@ interface EpisodeDao {
     @Query("DELETE FROM episodes WHERE itemId = :itemId")
     suspend fun deleteEpisodesByItemId(itemId: String)
 }
-
-@Dao
-interface PlaybackPositionDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrUpdate(position: PlaybackPositionEntity)
-
-    @Query("SELECT * FROM playback_positions WHERE contentId = :contentId AND contentType = :contentType")
-    suspend fun getPosition(contentId: String, contentType: String): PlaybackPositionEntity?
-
-    @Query("SELECT * FROM playback_positions ORDER BY lastUpdated DESC")
-    suspend fun getAllPositions(): List<PlaybackPositionEntity>
-
-    @Query("DELETE FROM playback_positions WHERE contentId = :contentId")
-    suspend fun deletePosition(contentId: String)
-
-    @Query("DELETE FROM playback_positions WHERE lastUpdated < :cutoffTime")
-    suspend fun deleteOldPositions(cutoffTime: Long)
-}
-
-@Dao
-interface PlaylistItemDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(items: List<PlaylistItemEntity>)
-
-    @Query("SELECT * FROM playlist_items WHERE playlistId = :playlistId ORDER BY position")
-    suspend fun getPlaylistItems(playlistId: String): List<PlaylistItemEntity>
-
-    @Query("SELECT * FROM playlist_items WHERE playlistId = :playlistId AND position > :currentPosition ORDER BY position LIMIT 1")
-    suspend fun getNextItem(playlistId: String, currentPosition: Int): PlaylistItemEntity?
-
-    @Query("SELECT * FROM playlist_items WHERE playlistId = :playlistId AND position < :currentPosition ORDER BY position DESC LIMIT 1")
-    suspend fun getPreviousItem(playlistId: String, currentPosition: Int): PlaylistItemEntity?
-
-    @Query("DELETE FROM playlist_items WHERE playlistId = :playlistId")
-    suspend fun deletePlaylistItems(playlistId: String)
-}

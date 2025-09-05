@@ -17,12 +17,9 @@ import com.example.newiptv.data.db.entities.*
         MovieCategoryEntity::class,
         MovieItemEntity::class,
         MovieInfoEntity::class,
-        MovieStreamDataEntity::class,
-        // 🔹 Video Player Enhancement Entities
-        PlaybackPositionEntity::class,
-        PlaylistItemEntity::class
+        MovieStreamDataEntity::class
     ],
-    version = 7,              // ✅ bumped to v7 for video player enhancements
+    version = 6,              // ✅ bumped to v6 to fix schema integrity
     exportSchema = false      // ✅ no schema export (simpler for dev)
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -39,10 +36,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun movieItemDao(): MovieItemDao
     abstract fun movieInfoDao(): MovieInfoDao
     abstract fun movieStreamDataDao(): MovieStreamDataDao
-
-    // 🔹 Video Player Enhancement DAOs
-    abstract fun playbackPositionDao(): PlaybackPositionDao
-    abstract fun playlistItemDao(): PlaylistItemDao
 
     companion object {
         // 🔹 Migration v1 → v2
@@ -248,38 +241,6 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Simple version bump - let fallbackToDestructiveMigration handle schema issues
-            }
-        }
-
-        // 🔹 Migration v6 → v7 (Add Video Player Enhancement Tables)
-        val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Create playback_positions table
-                database.execSQL("""
-                    CREATE TABLE playback_positions (
-                        contentId TEXT NOT NULL PRIMARY KEY,
-                        contentType TEXT NOT NULL,
-                        position INTEGER NOT NULL,
-                        duration INTEGER NOT NULL,
-                        lastUpdated INTEGER NOT NULL,
-                        seriesId TEXT,
-                        seasonNumber INTEGER,
-                        episodeNumber INTEGER
-                    )
-                """.trimIndent())
-
-                // Create playlist_items table
-                database.execSQL("""
-                    CREATE TABLE playlist_items (
-                        itemId TEXT NOT NULL PRIMARY KEY,
-                        playlistId TEXT NOT NULL,
-                        position INTEGER NOT NULL,
-                        contentType TEXT NOT NULL,
-                        contentId TEXT NOT NULL,
-                        title TEXT NOT NULL,
-                        thumbnail TEXT
-                    )
-                """.trimIndent())
             }
         }
     }

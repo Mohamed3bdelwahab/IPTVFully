@@ -20,8 +20,7 @@ object DatabaseProvider {
                 AppDatabase.MIGRATION_2_3,
                 AppDatabase.MIGRATION_3_4, // fix schema integrity
                 AppDatabase.MIGRATION_4_5, // add movie entities
-                AppDatabase.MIGRATION_5_6, // fix schema integrity v2
-                AppDatabase.MIGRATION_6_7  // add video player enhancements
+                AppDatabase.MIGRATION_5_6  // fix schema integrity v2
             )
             .fallbackToDestructiveMigration() // force fresh database on schema mismatch
             .build()

@@ -71,28 +71,3 @@ data class EpisodeEntity(
     val releaseDate: String?,
     val directSource: String?
 )
-
-// 🔹 Playback Positions (for resume functionality)
-@Entity(tableName = "playback_positions")
-data class PlaybackPositionEntity(
-    @PrimaryKey val contentId: String,
-    val contentType: String, // "movie", "series", "episode"
-    val position: Long, // Position in milliseconds
-    val duration: Long, // Total duration in milliseconds
-    val lastUpdated: Long, // Timestamp of last update
-    val seriesId: String?, // For episodes
-    val seasonNumber: Int?, // For episodes
-    val episodeNumber: Int? // For episodes
-)
-
-// 🔹 Playlist Items (for auto-play next functionality)
-@Entity(tableName = "playlist_items")
-data class PlaylistItemEntity(
-    @PrimaryKey val itemId: String,
-    val playlistId: String,
-    val position: Int, // Order in playlist
-    val contentType: String,
-    val contentId: String,
-    val title: String,
-    val thumbnail: String?
-)
