@@ -262,31 +262,31 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             // Reset resume flag for new video
             hasResumedFromPosition = false
             
-            // Determine content type and ID for tracking
-            val contentType = if (seriesId != null) "episode" else "movie"
-            val contentId = seriesId ?: videoTitle ?: "unknown"
-            
-            // Load resume position before loading video
-            lifecycleScope.launch {
-                try {
-                    val resumePosition = positionManager?.getSavedPosition(contentId, contentType) ?: 0L
-                    android.util.Log.d("VideoPlayerActivity", "📍 Resume position loaded: ${resumePosition}ms")
-                    
-                    // Load video with position tracking and resume position
-                    videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, resumePosition)
-                    
-                    // Start position tracking
-                    videoPlayer.startPositionTracking()
-                    
-                    // Load episodes for navigation if series ID is available
-                    if (seriesId != null) {
-                        loadEpisodesForNavigation()
+            // Load episodes first to get the specific episode ID
+            if (seriesId != null) {
+                loadEpisodesForNavigationAndVideo(videoUrl, videoTitle)
+            } else {
+                // For movies, use video title as content ID
+                val contentType = "movie"
+                val contentId = videoTitle ?: "unknown"
+                
+                // Load resume position before loading video
+                lifecycleScope.launch {
+                    try {
+                        val resumePosition = positionManager?.getSavedPosition(contentId, contentType) ?: 0L
+                        android.util.Log.d("VideoPlayerActivity", "📍 Resume position loaded for movie: ${resumePosition}ms")
+                        
+                        // Load video with position tracking and resume position
+                        videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, resumePosition)
+                        
+                        // Start position tracking
+                        videoPlayer.startPositionTracking()
+                    } catch (e: Exception) {
+                        android.util.Log.e("VideoPlayerActivity", "Failed to load resume position", e)
+                        // Load video without resume position
+                        videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, 0L)
+                        videoPlayer.startPositionTracking()
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("VideoPlayerActivity", "Failed to load resume position", e)
-                    // Load video without resume position
-                    videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, 0L)
-                    videoPlayer.startPositionTracking()
                 }
             }
         } else {
@@ -295,6 +295,107 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             binding.tvTitle.text = "Test Video (MKV)"
             videoPlayer.loadVideoWithTracking(testUrl, "test_video", "movie", 0L)
             videoPlayer.startPositionTracking()
+        }
+    }
+    
+    private fun loadEpisodesForNavigationAndVideo(videoUrl: String, videoTitle: String?) {
+        android.util.Log.d("VideoPlayerActivity", "=== LOADING EPISODES FOR NAVIGATION AND VIDEO ===")
+        android.util.Log.d("VideoPlayerActivity", "Series ID: $seriesId")
+        android.util.Log.d("VideoPlayerActivity", "Season Number: $seasonNumber")
+        android.util.Log.d("VideoPlayerActivity", "Episode Index: $currentEpisodeIndex")
+        
+        if (seriesId.isNullOrEmpty()) {
+            android.util.Log.e("VideoPlayerActivity", "Series ID is null or empty, cannot load episodes")
+            return
+        }
+        
+        // Use coroutine to load episodes from database
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val database = com.example.newiptv.data.db.DatabaseProvider.getDatabase(this@VideoPlayerActivity)
+                val episodeDao = database.episodeDao()
+                
+                android.util.Log.d("VideoPlayerActivity", "Database and DAO initialized successfully")
+                
+                // Load all episodes for the series first
+                val allEpisodes = episodeDao.getEpisodesSync(seriesId!!)
+                android.util.Log.d("VideoPlayerActivity", "Total episodes loaded for series $seriesId: ${allEpisodes.size}")
+                
+                // Log all episodes to see what we have
+                allEpisodes.forEach { episode ->
+                    android.util.Log.d("VideoPlayerActivity", "All episodes - ID: ${episode.id}, Title: ${episode.title}, Season: ${episode.season}, Episode: ${episode.episodeNum}")
+                }
+                
+                // Filter episodes for the current season
+                val loadedEpisodes = allEpisodes
+                    .filter { it.season == seasonNumber }
+                    .sortedBy { it.episodeNum }
+                
+                android.util.Log.d("VideoPlayerActivity", "Filtered episodes for season $seasonNumber: ${loadedEpisodes.size}")
+                
+                // Log filtered episodes
+                loadedEpisodes.forEach { episode ->
+                    android.util.Log.d("VideoPlayerActivity", "Filtered episode - ID: ${episode.id}, Title: ${episode.title}, Season: ${episode.season}, Episode: ${episode.episodeNum}")
+                }
+                
+                // Update UI on main thread
+                runOnUiThread {
+                    episodes = loadedEpisodes
+                    android.util.Log.d("VideoPlayerActivity", "Episodes list updated with ${episodes.size} episodes")
+                    
+                    // Get the current episode for position tracking
+                    if (episodes.isNotEmpty() && currentEpisodeIndex < episodes.size) {
+                        val currentEpisode = episodes[currentEpisodeIndex]
+                        android.util.Log.d("VideoPlayerActivity", "🎯 Current episode for position tracking: ${currentEpisode.title} (ID: ${currentEpisode.id})")
+                        
+                        // Use the specific episode ID for position tracking
+                        val contentType = "episode"
+                        val contentId = currentEpisode.id // Use specific episode ID instead of series ID
+                        
+                        // Load resume position for this specific episode
+                        lifecycleScope.launch {
+                            try {
+                                val resumePosition = positionManager?.getSavedPosition(contentId, contentType) ?: 0L
+                                android.util.Log.d("VideoPlayerActivity", "📍 Resume position loaded for episode ${currentEpisode.title}: ${resumePosition}ms")
+                                
+                                // Load video with position tracking and resume position
+                                videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, resumePosition)
+                                
+                                // Start position tracking
+                                videoPlayer.startPositionTracking()
+                                
+                                // Initialize auto-play manager with episodes
+                                autoPlayManager.initializeAutoPlay(seriesId!!, currentEpisode.id, episodes)
+                                android.util.Log.d("VideoPlayerActivity", "🎬 Auto-play initialized for episode: ${currentEpisode.title}")
+                                
+                            } catch (e: Exception) {
+                                android.util.Log.e("VideoPlayerActivity", "Failed to load resume position for episode", e)
+                                // Load video without resume position
+                                videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, 0L)
+                                videoPlayer.startPositionTracking()
+                                
+                                // Initialize auto-play manager
+                                autoPlayManager.initializeAutoPlay(seriesId!!, currentEpisode.id, episodes)
+                            }
+                        }
+                    } else {
+                        android.util.Log.e("VideoPlayerActivity", "No episodes found or invalid episode index")
+                        // Fallback to series ID if no episodes found
+                        val contentType = "episode"
+                        val contentId = seriesId!!
+                        videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, 0L)
+                        videoPlayer.startPositionTracking()
+                    }
+                    
+                    // Log final episode details
+                    episodes.forEachIndexed { index, episode ->
+                        android.util.Log.d("VideoPlayerActivity", "Final episode $index: ${episode.title} (Season ${episode.season}, Episode ${episode.episodeNum})")
+                    }
+                }
+        } catch (e: Exception) {
+                android.util.Log.e("VideoPlayerActivity", "Error loading episodes for navigation and video", e)
+                e.printStackTrace()
+            }
         }
     }
     
@@ -765,10 +866,29 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             // Update title
             binding.tvTitle.text = nextEpisode.title
             
-            // Load video with tracking
+            // Load video with tracking using specific episode ID
             val contentType = "episode"
-            val contentId = nextEpisode.id
-            videoPlayer.loadVideoWithTracking(nextEpisode.directSource, contentId, contentType)
+            val contentId = nextEpisode.id // Use specific episode ID for position tracking
+            
+            // Load resume position for this specific episode
+            lifecycleScope.launch {
+                try {
+                    val resumePosition = positionManager?.getSavedPosition(contentId, contentType) ?: 0L
+                    android.util.Log.d("VideoPlayerActivity", "📍 Resume position loaded for next episode ${nextEpisode.title}: ${resumePosition}ms")
+                    
+                    // Load video with position tracking and resume position
+                    videoPlayer.loadVideoWithTracking(nextEpisode.directSource, contentId, contentType, resumePosition)
+                    
+                    // Start position tracking
+                    videoPlayer.startPositionTracking()
+                    
+                } catch (e: Exception) {
+                    android.util.Log.e("VideoPlayerActivity", "Failed to load resume position for next episode", e)
+                    // Load video without resume position
+                    videoPlayer.loadVideoWithTracking(nextEpisode.directSource, contentId, contentType, 0L)
+                    videoPlayer.startPositionTracking()
+                }
+            }
             
             // Show controls briefly
             showControlsTemporarily()
