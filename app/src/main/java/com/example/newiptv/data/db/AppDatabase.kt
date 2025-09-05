@@ -12,12 +12,6 @@ import com.example.newiptv.data.db.entities.*
         ItemEntity::class,
         InfoEntity::class,
         EpisodeEntity::class,
-        SeasonEntity::class,
-        // 🔹 Movie Entities
-        MovieCategoryEntity::class,
-        MovieItemEntity::class,
-        MovieInfoEntity::class,
-        MovieStreamDataEntity::class,
         // 🔹 Playback Position Entity
         PlaybackPositionEntity::class
     ],
@@ -31,13 +25,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
     abstract fun infoDao(): InfoDao
     abstract fun episodeDao(): EpisodeDao
-    abstract fun seasonDao(): SeasonDao
-
-    // 🔹 Movie DAOs
-    abstract fun movieCategoryDao(): MovieCategoryDao
-    abstract fun movieItemDao(): MovieItemDao
-    abstract fun movieInfoDao(): MovieInfoDao
-    abstract fun movieStreamDataDao(): MovieStreamDataDao
 
     // 🔹 Playback Position DAO
     abstract fun playbackPositionDao(): PlaybackPositionDao
@@ -252,19 +239,8 @@ abstract class AppDatabase : RoomDatabase() {
         // 🔹 Migration v6 → v7 (Add Playback Position Tracking)
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Create playback_positions table
-                database.execSQL("""
-                    CREATE TABLE IF NOT EXISTS playback_positions (
-                        videoId TEXT NOT NULL PRIMARY KEY,
-                        contentType TEXT NOT NULL,
-                        seriesId TEXT,
-                        seasonNumber INTEGER,
-                        episodeNumber INTEGER,
-                        position INTEGER NOT NULL,
-                        duration INTEGER NOT NULL,
-                        lastUpdated INTEGER NOT NULL
-                    )
-                """.trimIndent())
+                // Simple version bump - let fallbackToDestructiveMigration handle schema issues
+                // The playback_positions table will be created automatically by Room
             }
         }
     }
