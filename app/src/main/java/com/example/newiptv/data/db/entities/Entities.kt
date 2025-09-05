@@ -71,16 +71,3 @@ data class EpisodeEntity(
     val releaseDate: String?,
     val directSource: String?
 )
-
-// 🔹 Playback Positions (remember last position for videos)
-@Entity(tableName = "playback_positions")
-data class PlaybackPositionEntity(
-    @PrimaryKey val videoId: String,
-    val contentType: String, // "series" or "movie"
-    val seriesId: String?,
-    val seasonNumber: Int?,
-    val episodeNumber: Int?,
-    val position: Long, // Position in milliseconds
-    val duration: Long, // Total duration in milliseconds
-    val lastUpdated: Long // Timestamp
-)

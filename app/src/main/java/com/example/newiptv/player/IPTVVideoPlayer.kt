@@ -12,8 +12,6 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.LoadControl
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -28,11 +26,7 @@ class IPTVVideoPlayer(
     
     companion object {
         private const val TAG = "IPTVVideoPlayer"
-        private const val BUFFER_SIZE = 100 * 1024 * 1024 // 100MB buffer (increased from 50MB)
-        private const val MIN_BUFFER_MS = 15000 // 15 seconds
-        private const val MAX_BUFFER_MS = 30000 // 30 seconds
-        private const val BUFFER_FOR_PLAYBACK_MS = 5000 // 5 seconds
-        private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 5000 // 5 seconds
+        private const val BUFFER_SIZE = 50 * 1024 * 1024 // 50MB buffer
         private const val CONNECT_TIMEOUT = 30L
         private const val READ_TIMEOUT = 30L
     }
@@ -67,13 +61,9 @@ class IPTVVideoPlayer(
             // Create media source factory
             val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
             
-            // Create enhanced LoadControl for better buffering
-            val loadControl = createLoadControl()
-            
             // Create ExoPlayer with custom configuration
             exoPlayer = ExoPlayer.Builder(context)
                 .setMediaSourceFactory(mediaSourceFactory)
-                .setLoadControl(loadControl)
                 .build()
             
             // Set up player listeners
@@ -117,22 +107,6 @@ class IPTVVideoPlayer(
             Log.e(TAG, "Failed to initialize player", e)
             playerListener?.onPlayerError("Failed to initialize player: ${e.message}")
         }
-    }
-    
-    /**
-     * Create enhanced LoadControl for better buffering performance
-     */
-    private fun createLoadControl(): LoadControl {
-        return DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                MIN_BUFFER_MS,
-                MAX_BUFFER_MS,
-                BUFFER_FOR_PLAYBACK_MS,
-                BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
-            )
-            .setTargetBufferBytes(BUFFER_SIZE)
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
     }
     
     /**

@@ -135,17 +135,21 @@ class TvRepository(
                     Log.d("TvRepository", "Saved info for item=$itemId type=$type")
                 }
 
-                // ✅ Save episodes (series only)
+                // ✅ Save seasons + episodes (series only)
                 if (type == "series" && apiInfo.episodes != null) {
                     val seasonWithEpisodes = ApiTVMapping.mapSeasonsAndEpisodes(apiInfo.episodes, itemId)
 
-                    // Clear & insert episodes (seasons are not stored separately)
+                    // Clear & insert seasons
+                    database.seasonDao().deleteSeasonsBySeries(itemId)
+                    database.seasonDao().insertAll(seasonWithEpisodes.seasons)
+
+                    // Clear & insert episodes
                     episodeDao.deleteEpisodesByItemId(itemId)
                     episodeDao.insertAll(seasonWithEpisodes.episodes)
 
                     Log.d(
                         "TvRepository",
-                        "Saved ${seasonWithEpisodes.episodes.size} episodes for series=$itemId"
+                        "Saved ${seasonWithEpisodes.seasons.size} seasons & ${seasonWithEpisodes.episodes.size} episodes for series=$itemId"
                     )
                     
                     // Log first few episodes to check directSource

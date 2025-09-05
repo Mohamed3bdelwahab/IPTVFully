@@ -12,10 +12,14 @@ import com.example.newiptv.data.db.entities.*
         ItemEntity::class,
         InfoEntity::class,
         EpisodeEntity::class,
-        // 🔹 Playback Position Entity
-        PlaybackPositionEntity::class
+        SeasonEntity::class,
+        // 🔹 Movie Entities
+        MovieCategoryEntity::class,
+        MovieItemEntity::class,
+        MovieInfoEntity::class,
+        MovieStreamDataEntity::class
     ],
-    version = 7,              // ✅ bumped to v7 for playback position tracking
+    version = 6,              // ✅ bumped to v6 to fix schema integrity
     exportSchema = false      // ✅ no schema export (simpler for dev)
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,9 +29,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
     abstract fun infoDao(): InfoDao
     abstract fun episodeDao(): EpisodeDao
+    abstract fun seasonDao(): SeasonDao
 
-    // 🔹 Playback Position DAO
-    abstract fun playbackPositionDao(): PlaybackPositionDao
+    // 🔹 Movie DAOs
+    abstract fun movieCategoryDao(): MovieCategoryDao
+    abstract fun movieItemDao(): MovieItemDao
+    abstract fun movieInfoDao(): MovieInfoDao
+    abstract fun movieStreamDataDao(): MovieStreamDataDao
 
     companion object {
         // 🔹 Migration v1 → v2
@@ -233,14 +241,6 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Simple version bump - let fallbackToDestructiveMigration handle schema issues
-            }
-        }
-
-        // 🔹 Migration v6 → v7 (Add Playback Position Tracking)
-        val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Simple version bump - let fallbackToDestructiveMigration handle schema issues
-                // The playback_positions table will be created automatically by Room
             }
         }
     }

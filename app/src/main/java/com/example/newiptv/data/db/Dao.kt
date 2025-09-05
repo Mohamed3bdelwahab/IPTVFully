@@ -69,21 +69,3 @@ interface EpisodeDao {
     @Query("DELETE FROM episodes WHERE itemId = :itemId")
     suspend fun deleteEpisodesByItemId(itemId: String)
 }
-
-@Dao
-interface PlaybackPositionDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun savePosition(position: PlaybackPositionEntity)
-
-    @Query("SELECT * FROM playback_positions WHERE videoId = :videoId")
-    suspend fun getPosition(videoId: String): PlaybackPositionEntity?
-
-    @Query("DELETE FROM playback_positions WHERE videoId = :videoId")
-    suspend fun deletePosition(videoId: String)
-
-    @Query("SELECT * FROM playback_positions WHERE contentType = :contentType")
-    suspend fun getPositionsByType(contentType: String): List<PlaybackPositionEntity>
-
-    @Query("SELECT * FROM playback_positions WHERE seriesId = :seriesId")
-    suspend fun getPositionsBySeries(seriesId: String): List<PlaybackPositionEntity>
-}
