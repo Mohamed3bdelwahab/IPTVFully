@@ -104,6 +104,20 @@
 - **Performance Optimization**: Leanback optimized for TV hardware
 - **Accessibility**: Built-in accessibility features
 
+#### **9. Remember Last Position Feature**
+- **Position Tracking**: Automatic playback position saving every 5 seconds
+- **Database Persistence**: Room database storage for position data
+- **Automatic Restoration**: Resume from last position on video start
+- **Position Management**: Cleanup and management of saved positions
+- **User Preferences**: Configurable position tracking settings
+
+#### **10. Auto-Play Next Feature**
+- **Seamless Transitions**: Automatic next episode playback
+- **Playlist Management**: Complete episode playlist handling
+- **User Controls**: Enable/disable auto-play functionality
+- **Episode Detection**: Smart next episode detection
+- **Binge-Watching**: Continuous viewing experience
+
 ---
 
 ## 🔧 **Technical Architecture**

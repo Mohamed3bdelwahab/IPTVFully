@@ -215,6 +215,27 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         // Initialize volume
         binding.volumeSeekBar.progress = (videoPlayer.getVolume() * 100).toInt()
         updateVolumeIcon(videoPlayer.getVolume())
+        
+        // Set up episode navigation and menu buttons
+        binding.btnPreviousEpisode.setOnClickListener {
+            android.util.Log.d("VideoPlayerActivity", "🔄 Previous Episode button clicked")
+            playPreviousEpisode()
+        }
+        
+        binding.btnNextEpisode.setOnClickListener {
+            android.util.Log.d("VideoPlayerActivity", "⏭️ Next Episode button clicked")
+            playNextEpisode()
+        }
+        
+        binding.btnSpeedMenu.setOnClickListener {
+            android.util.Log.d("VideoPlayerActivity", "⚡ Speed Menu button clicked")
+            showSpeedMenu()
+        }
+        
+        binding.btnPlaylistMenu.setOnClickListener {
+            android.util.Log.d("VideoPlayerActivity", "📋 Playlist Menu button clicked")
+            showPlaylistMenu()
+        }
     }
     
     private fun setupGestures() {
@@ -770,6 +791,9 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         }
         
         if (currentEpisodeIndex < episodes.size - 1) {
+            // Save current episode position before switching
+            saveCurrentEpisodePosition()
+            
             currentEpisodeIndex++
             android.util.Log.d("VideoPlayerActivity", "Moving to next episode at index: $currentEpisodeIndex")
             playEpisodeAtIndex(currentEpisodeIndex)
@@ -792,6 +816,9 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         }
         
         if (currentEpisodeIndex > 0) {
+            // Save current episode position before switching
+            saveCurrentEpisodePosition()
+            
             currentEpisodeIndex--
             android.util.Log.d("VideoPlayerActivity", "Moving to previous episode at index: $currentEpisodeIndex")
             playEpisodeAtIndex(currentEpisodeIndex)
@@ -811,8 +838,35 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                 // Update title
                 binding.tvTitle.text = episode.title
                 
-                // Load and play the episode
-                videoPlayer.loadVideo(episode.directSource)
+                // Update current episode index
+                currentEpisodeIndex = index
+                
+                // Update auto-play manager with current episode
+                autoPlayManager.updateCurrentEpisode(episode.id)
+                
+                // Load video with tracking using specific episode ID for resume position
+                val contentType = "episode"
+                val contentId = episode.id // Use specific episode ID for position tracking
+                
+                // Load resume position for this specific episode
+                lifecycleScope.launch {
+                    try {
+                        val resumePosition = positionManager?.getSavedPosition(contentId, contentType) ?: 0L
+                        android.util.Log.d("VideoPlayerActivity", "📍 Resume position loaded for episode ${episode.title}: ${resumePosition}ms")
+                        
+                        // Load video with position tracking and resume position
+                        videoPlayer.loadVideoWithTracking(episode.directSource, contentId, contentType, resumePosition)
+                        
+                        // Start position tracking
+                        videoPlayer.startPositionTracking()
+                        
+                    } catch (e: Exception) {
+                        android.util.Log.e("VideoPlayerActivity", "Failed to load resume position for episode", e)
+                        // Load video without resume position
+                        videoPlayer.loadVideoWithTracking(episode.directSource, contentId, contentType, 0L)
+                        videoPlayer.startPositionTracking()
+                    }
+                }
                 
                 // Show controls briefly
                 showControlsTemporarily()
@@ -913,4 +967,25 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         //showControlsTemporarily()
     }
     
+    /**
+     * Save current episode position before switching episodes
+     */
+    private fun saveCurrentEpisodePosition() {
+        try {
+            if (episodes.isNotEmpty() && currentEpisodeIndex in episodes.indices) {
+                val currentEpisode = episodes[currentEpisodeIndex]
+                val currentPosition = videoPlayer.getCurrentPosition()
+                
+                if (currentPosition > 0) {
+                    android.util.Log.d("VideoPlayerActivity", "💾 Saving position for episode ${currentEpisode.title}: ${currentPosition}ms")
+                    
+                    // Save position using the position manager
+                    positionManager?.saveCurrentPosition()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("VideoPlayerActivity", "Failed to save current episode position", e)
+        }
+    }
+
 }
