@@ -42,6 +42,14 @@
 14. **[NewIPTV_V2_TV_REMOTE_COMPLETE_DOCUMENTATION.md](TV_REMOTE_COMPLETE_DOCUMENTATION.md)** - TV remote controls and navigation
 15. **[NewIPTV_V2_PLAYBACK_SPEED_COMPLETE_DOCUMENTATION.md](PLAYBACK_SPEED_COMPLETE_DOCUMENTATION.md)** - Playback speed controls
 
+### **Latest Feature Documentation**
+16. **[REMEMBER_LAST_POSITION_FEATURE.md](REMEMBER_LAST_POSITION_FEATURE.md)** - Complete position tracking documentation
+17. **[AUTO_PLAY_NEXT_FEATURE.md](AUTO_PLAY_NEXT_FEATURE.md)** - Auto-play next episode functionality
+18. **[RESUME_POSITION_EPISODE_ID_FIX.md](RESUME_POSITION_EPISODE_ID_FIX.md)** - Episode ID fix for resume position
+19. **[VIDEO_PLAYER_UI_BUTTONS_IMPLEMENTATION.md](VIDEO_PLAYER_UI_BUTTONS_IMPLEMENTATION.md)** - UI buttons implementation
+20. **[OVERLAY_PERMISSION_FIX_DOCUMENTATION.md](OVERLAY_PERMISSION_FIX_DOCUMENTATION.md)** - Overlay permission fix documentation
+21. **[VIDEO_PLAYER_NAVIGATION_RESUME_CHECKLIST.md](VIDEO_PLAYER_NAVIGATION_RESUME_CHECKLIST.md)** - Navigation resume checklist
+
 ---
 
 ## 🚀 **Major Features Implemented**
@@ -117,6 +125,29 @@
 - **User Controls**: Enable/disable auto-play functionality
 - **Episode Detection**: Smart next episode detection
 - **Binge-Watching**: Continuous viewing experience
+
+#### **11. UI Buttons Enhancement**
+- **Episode Navigation Buttons**: Dedicated Previous/Next Episode buttons
+- **Menu Access Buttons**: Direct access to Speed Menu and Playlist Menu
+- **Custom Icons**: Vector drawable icons for all new buttons
+- **Consistent Layout**: Unified button design with proper spacing
+- **Touch Feedback**: Visual feedback and accessibility support
+- **TV Optimization**: Large touch targets suitable for TV remote
+
+#### **12. Overlay Permission Management**
+- **Runtime Permission Handling**: Proper SYSTEM_ALERT_WINDOW permission management
+- **Automatic Permission Request**: Permission request on app startup
+- **User Guidance**: Clear instructions for permission granting
+- **Graceful Error Handling**: User-friendly messages for permission denial
+- **Backward Compatibility**: Support for Android versions below API 23
+- **Security Compliance**: Follows Android security best practices
+
+#### **13. Enhanced Resume Position System**
+- **Individual Episode Tracking**: Each episode maintains its own resume position
+- **Manual Navigation Support**: Position saving during manual episode switching
+- **Position Persistence**: Database storage for all episode positions
+- **Seamless Resume**: Automatic position restoration on episode load
+- **Conflict Resolution**: No more shared positions between episodes in same season
 
 ---
 

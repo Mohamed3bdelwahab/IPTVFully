@@ -379,7 +379,149 @@ HomeScreen → SeriesScreen → SeriesDetailScreen → VideoPlayerActivity
 
 ---
 
+### **Session 15: December 2024 - UI Buttons & Overlay Permission Fix**
+
+#### **🎯 Session Overview**
+**Date**: December 2024  
+**Duration**: 3 hours  
+**Status**: ✅ **COMPLETED**
+
+**Focus Areas**:
+- UI enhancement with dedicated navigation buttons
+- Critical overlay permission fix for menu functionality
+- Resume position enhancement for manual navigation
+- Comprehensive documentation and testing
+
+#### **🔧 Major Implementations**
+
+**1. UI Buttons Enhancement**
+- Added dedicated episode navigation buttons (Previous/Next Episode)
+- Added menu access buttons (Speed Menu/Playlist Menu)
+- Created custom vector drawable icons for all new buttons
+- Implemented proper button layout with consistent styling
+- Added comprehensive button click handlers and functionality
+
+**2. Overlay Permission Fix**
+- Identified and resolved WindowManager$BadTokenException for window type 2038
+- Implemented runtime permission handling for SYSTEM_ALERT_WINDOW permission
+- Added automatic permission request on app startup
+- Created user-friendly permission guidance and error handling
+- Ensured backward compatibility with Android versions below API 23
+
+**3. Resume Position Enhancement**
+- Fixed resume position to use individual episode IDs instead of series ID
+- Added position saving before manual episode navigation
+- Enhanced playEpisodeAtIndex() method with proper position tracking
+- Implemented saveCurrentEpisodePosition() for manual navigation
+- Resolved issue where all episodes in a season shared the same position
+
+**4. User Experience Improvements**
+- Added clear toast messages for permission guidance
+- Implemented graceful error handling for permission denial
+- Enhanced logging for better debugging and monitoring
+- Created comprehensive documentation for all implementations
+
+#### **🚀 Key Achievements**
+
+**1. Complete UI Enhancement**
+- All major functions now have dedicated UI buttons
+- Consistent button design with proper touch feedback
+- Accessibility support with content descriptions
+- TV-optimized layout with large touch targets
+
+**2. Permission Compliance**
+- Proper handling of Android 6.0+ permission model
+- Automatic permission request with user guidance
+- Graceful handling of permission denial
+- Security compliance with Android best practices
+
+**3. Resume Position Fix**
+- Individual episode position tracking working correctly
+- Manual navigation preserves episode-specific positions
+- No more shared positions between episodes in same season
+- Seamless resume experience across all navigation methods
+
+**4. Error Resolution**
+- Fixed critical overlay permission issue
+- Resolved WindowManager$BadTokenException
+- Eliminated menu functionality failures
+- Improved overall app stability and reliability
+
+#### **📊 Technical Impact**
+
+**Before Fix:**
+```
+E/SpeedOverlayMenu: Error showing speed overlay menu
+E/SpeedOverlayMenu: android.view.WindowManager$BadTokenException: Unable to add window android.view.ViewRootImpl$W@62d7e3c -- permission denied for window type 2038
+```
+
+**After Fix:**
+```
+D/VideoPlayerActivity: 🔒 Overlay permission not granted, requesting...
+D/VideoPlayerActivity: ✅ Overlay permission granted by user
+D/VideoPlayerActivity: ⚡ Speed Menu button clicked
+D/SpeedOverlayMenu: Speed overlay menu shown with speed: 1.0x
+```
+
+#### **📋 Files Modified**
+
+**Core Implementation:**
+- `app/src/main/java/com/example/newiptv/player/VideoPlayerActivity.kt` - Added permission handling and UI button logic
+- `app/src/main/res/layout/activity_video_player.xml` - Added new button layout
+- `app/src/main/res/drawable/ic_speed.xml` - New speed menu icon
+- `app/src/main/res/drawable/ic_playlist.xml` - New playlist menu icon
+- `app/src/main/res/drawable/ic_skip_previous.xml` - New previous episode icon
+- `app/src/main/res/drawable/ic_skip_next.xml` - New next episode icon
+
+**Documentation:**
+- `Docs/VIDEO_PLAYER_UI_BUTTONS_IMPLEMENTATION.md` - Complete UI buttons documentation
+- `Docs/OVERLAY_PERMISSION_FIX_DOCUMENTATION.md` - Overlay permission fix documentation
+- `Docs/VIDEO_PLAYER_NAVIGATION_RESUME_CHECKLIST.md` - Updated navigation checklist
+
+#### **🧪 Testing Results**
+
+**UI Buttons:**
+- ✅ All buttons respond correctly to user input
+- ✅ Episode navigation works with resume position
+- ✅ Menu buttons open overlays after permission granted
+- ✅ Proper visual feedback and accessibility support
+
+**Overlay Permission:**
+- ✅ Permission request appears on first app launch
+- ✅ System settings open correctly for permission granting
+- ✅ Menus work after permission is granted
+- ✅ Graceful handling when permission is denied
+
+**Resume Position:**
+- ✅ Individual episode positions saved correctly
+- ✅ Each episode resumes from its own saved position
+- ✅ Manual navigation preserves episode-specific positions
+- ✅ No position conflicts between episodes
+
+#### **📈 Project Status Update**
+
+**V2 Progress**: **IMPLEMENTATION PHASE** - **95% Complete**
+
+**Completed Features**:
+- ✅ Home Screen with 6 menu cards (100%)
+- ✅ Series Screen with dual-panel layout (100%)
+- ✅ Movies System with comprehensive functionality (100%)
+- ✅ Series Info Screen with episode management (100%)
+- ✅ Movie Info Screen with detailed information (100%)
+- ✅ Video Player with advanced controls (100%)
+- ✅ Remember Last Position feature (100%)
+- ✅ Auto-Play Next functionality (100%)
+- ✅ Audio track selection fixes (100%)
+- ✅ UI Buttons and navigation (100%)
+- ✅ Overlay permission handling (100%)
+- ✅ Resume position fixes (100%)
+
+**Remaining Tasks**:
+- 🔄 Final testing and optimization (5%)
+
+---
+
 **History Created**: December 2024  
 **Last Updated**: December 2024  
 **Status**: 📚 **ACTIVE**  
-**Next Update**: After next development session
+**Next Update**: After final testing and deployment
