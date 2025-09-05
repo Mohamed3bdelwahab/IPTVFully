@@ -59,6 +59,8 @@ if %ERRORLEVEL% neq 0 (
 echo ✅ Device connected: %deviceIP%
 
 REM Step 7: Install APK
+"%adbPath%" -s %deviceIP%   uninstall com.example.newiptv
+
 echo 📥 Step 7: Installing APK...
 "%adbPath%" -s %deviceIP% install -r "%apkPath%"
 if %ERRORLEVEL% neq 0 (

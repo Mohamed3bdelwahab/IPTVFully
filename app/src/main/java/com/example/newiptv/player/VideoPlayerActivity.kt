@@ -10,9 +10,11 @@ import android.view.WindowManager
 import android.widget.SeekBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.ui.PlayerView
 import com.example.newiptv.R
 import com.example.newiptv.databinding.ActivityVideoPlayerBinding
+import com.example.newiptv.data.db.DatabaseProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,6 +35,11 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private var isControlsVisible = true
     private val handler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { hideControls() }
+    
+    // Position tracking and auto-play managers
+    private lateinit var positionManager: PlaybackPositionManager
+    private lateinit var autoPlayManager: AutoPlayManager
+    private var hasResumedFromPosition = false
     
     // Episode navigation data
     private var seriesId: String? = null
@@ -68,8 +75,13 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     }
     
     private fun setupPlayer() {
-        // Initialize video player
-        videoPlayer = IPTVVideoPlayer(this, this)
+        // Initialize position tracking and auto-play managers
+        val database = DatabaseProvider.getDatabase(this)
+        positionManager = PlaybackPositionManager(database)
+        autoPlayManager = AutoPlayManager()
+        
+        // Initialize video player with managers
+        videoPlayer = IPTVVideoPlayer(this, this, positionManager, autoPlayManager)
         
         // Bind ExoPlayer to PlayerView
         videoPlayer.getPlayer()?.let { player ->
@@ -246,17 +258,43 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         
         if (videoUrl != null) {
             binding.tvTitle.text = videoTitle ?: "Video Player"
-            videoPlayer.loadVideo(videoUrl)
             
-            // Load episodes for navigation if series ID is available
-            if (seriesId != null) {
-                loadEpisodesForNavigation()
+            // Reset resume flag for new video
+            hasResumedFromPosition = false
+            
+            // Determine content type and ID for tracking
+            val contentType = if (seriesId != null) "episode" else "movie"
+            val contentId = seriesId ?: videoTitle ?: "unknown"
+            
+            // Load resume position before loading video
+            lifecycleScope.launch {
+                try {
+                    val resumePosition = positionManager?.getSavedPosition(contentId, contentType) ?: 0L
+                    android.util.Log.d("VideoPlayerActivity", "📍 Resume position loaded: ${resumePosition}ms")
+                    
+                    // Load video with position tracking and resume position
+                    videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, resumePosition)
+                    
+                    // Start position tracking
+                    videoPlayer.startPositionTracking()
+                    
+                    // Load episodes for navigation if series ID is available
+                    if (seriesId != null) {
+                        loadEpisodesForNavigation()
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("VideoPlayerActivity", "Failed to load resume position", e)
+                    // Load video without resume position
+                    videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, 0L)
+                    videoPlayer.startPositionTracking()
+                }
             }
         } else {
-            // Load test video
+            // Load test video with tracking
             val testUrl = "http://aws85485.amazonedge.net/series/moh7amed819/150730/172237.mkv"
             binding.tvTitle.text = "Test Video (MKV)"
-            videoPlayer.loadVideo(testUrl)
+            videoPlayer.loadVideoWithTracking(testUrl, "test_video", "movie", 0L)
+            videoPlayer.startPositionTracking()
         }
     }
     
@@ -303,6 +341,13 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                 runOnUiThread {
                     episodes = loadedEpisodes
                     android.util.Log.d("VideoPlayerActivity", "Episodes list updated with ${episodes.size} episodes")
+                    
+                    // Initialize auto-play manager with episodes
+                    if (episodes.isNotEmpty() && currentEpisodeIndex < episodes.size) {
+                        val currentEpisode = episodes[currentEpisodeIndex]
+                        autoPlayManager.initializeAutoPlay(seriesId!!, currentEpisode.id, episodes)
+                        android.util.Log.d("VideoPlayerActivity", "🎬 Auto-play initialized for episode: ${currentEpisode.title}")
+                    }
                     
                     // Log final episode details
                     episodes.forEachIndexed { index, episode ->
@@ -430,6 +475,39 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     override fun onBufferingChanged(isBuffering: Boolean) {
         runOnUiThread {
             binding.progressBar.visibility = if (isBuffering) View.VISIBLE else View.GONE
+        }
+    }
+    
+    override fun onEpisodeEnded() {
+        runOnUiThread {
+            android.util.Log.d("VideoPlayerActivity", "🎬 Episode ended - checking auto-play")
+            
+            // Check if auto-play should trigger
+            if (autoPlayManager.shouldAutoPlayNext()) {
+                val nextEpisode = autoPlayManager.getNextEpisode()
+                if (nextEpisode != null) {
+                    android.util.Log.d("VideoPlayerActivity", "🎬 Auto-playing next episode: ${nextEpisode.title}")
+                    // Load next episode
+                    loadNextEpisode(nextEpisode)
+                } else {
+                    android.util.Log.d("VideoPlayerActivity", "🎬 No next episode available")
+                }
+            } else {
+                android.util.Log.d("VideoPlayerActivity", "🎬 Auto-play disabled or no next episode")
+            }
+        }
+    }
+    
+    override fun onPositionLoaded(position: Long) {
+        runOnUiThread {
+            android.util.Log.d("VideoPlayerActivity", "📍 Position loaded: ${position}ms")
+            
+            // Only resume once to prevent loops
+            if (position > 0 && !hasResumedFromPosition) {
+                hasResumedFromPosition = true
+                // Show resume dialog or auto-resume
+                showResumeDialog(position)
+            }
         }
     }
     
@@ -672,4 +750,47 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             setupImmersiveMode()
         }
     }
+    
+    /**
+     * Load next episode for auto-play
+     */
+    private fun loadNextEpisode(nextEpisode: com.example.newiptv.data.db.entities.EpisodeEntity) {
+        android.util.Log.d("VideoPlayerActivity", "🎬 Loading next episode: ${nextEpisode.title}")
+        
+        if (!nextEpisode.directSource.isNullOrEmpty()) {
+            // Update current episode index
+            currentEpisodeIndex = episodes.indexOf(nextEpisode)
+            autoPlayManager.updateCurrentEpisode(nextEpisode.id)
+            
+            // Update title
+            binding.tvTitle.text = nextEpisode.title
+            
+            // Load video with tracking
+            val contentType = "episode"
+            val contentId = nextEpisode.id
+            videoPlayer.loadVideoWithTracking(nextEpisode.directSource, contentId, contentType)
+            
+            // Show controls briefly
+            showControlsTemporarily()
+        } else {
+            android.util.Log.e("VideoPlayerActivity", "Next episode directSource is null or empty!")
+        }
+    }
+    
+    /**
+     * Show resume dialog when position is loaded
+     */
+    private fun showResumeDialog(position: Long) {
+        // For now, just auto-resume from the position
+        // In a full implementation, this would show a dialog asking the user
+        android.util.Log.d("VideoPlayerActivity", "📍 Auto-resuming from position: ${position}ms")
+        
+        // Seek to the saved position
+        videoPlayer.seekTo(position)
+        
+        // Show a brief message
+        //binding.tvTitle.text = "Resuming from ${formatTime(position)}"
+        //showControlsTemporarily()
+    }
+    
 }

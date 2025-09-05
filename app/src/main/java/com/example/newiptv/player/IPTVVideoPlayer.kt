@@ -9,31 +9,51 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 
 /**
  * Modern IPTV Video Player with ExoPlayer and FFmpeg support
  * Supports various formats including MKV, MP4, AVI, etc.
+ * Enhanced with position tracking and auto-play functionality
  */
 class IPTVVideoPlayer(
     private val context: Context,
-    private val playerListener: PlayerListener? = null
+    private val playerListener: PlayerListener? = null,
+    private val positionManager: PlaybackPositionManager? = null,
+    private val autoPlayManager: AutoPlayManager? = null
 ) {
     
     companion object {
         private const val TAG = "IPTVVideoPlayer"
-        private const val BUFFER_SIZE = 50 * 1024 * 1024 // 50MB buffer
+        private const val BUFFER_SIZE = 100 * 1024 * 1024 // 100MB buffer (increased)
         private const val CONNECT_TIMEOUT = 30L
         private const val READ_TIMEOUT = 30L
+        private const val MIN_BUFFER_MS = 30_000 // 30 seconds minimum buffer
+        private const val MAX_BUFFER_MS = 120_000 // 120 seconds maximum buffer
+        private const val BUFFER_FOR_PLAYBACK_MS = 10_000 // 10 seconds for playback
+        private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 5_000 // 5 seconds after rebuffer
     }
     
     private var exoPlayer: ExoPlayer? = null
     private var currentUri: Uri? = null
     private var isInitialized = false
+    private var currentContentId: String? = null
+    private var currentContentType: String? = null
+    private var currentDuration: Long = 0L
+    private var pendingResumePosition: Long = 0L
+    private var positionTrackingJob: kotlinx.coroutines.Job? = null
+    private var isPositionTrackingStarted = false
     
     interface PlayerListener {
         fun onPlayerReady()
@@ -41,6 +61,8 @@ class IPTVVideoPlayer(
         fun onPlaybackStateChanged(isPlaying: Boolean)
         fun onProgressChanged(position: Long, duration: Long)
         fun onBufferingChanged(isBuffering: Boolean)
+        fun onEpisodeEnded() // For auto-play functionality
+        fun onPositionLoaded(position: Long) // For resume functionality
     }
     
     init {
@@ -61,9 +83,27 @@ class IPTVVideoPlayer(
             // Create media source factory
             val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
             
-            // Create ExoPlayer with custom configuration
+            // Create enhanced load control with better buffer settings
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    MIN_BUFFER_MS,
+                    MAX_BUFFER_MS,
+                    BUFFER_FOR_PLAYBACK_MS,
+                    BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                )
+                .setTargetBufferBytes(BUFFER_SIZE)
+                .build()
+            
+            Log.i(TAG, "🎬 Creating Enhanced Player with:")
+            Log.i(TAG, "   Buffer: ${BUFFER_SIZE / (1024 * 1024)}MB")
+            Log.i(TAG, "   Min Buffer: ${MIN_BUFFER_MS / 1000}s")
+            Log.i(TAG, "   Max Buffer: ${MAX_BUFFER_MS / 1000}s")
+            Log.i(TAG, "   Playback Buffer: ${BUFFER_FOR_PLAYBACK_MS / 1000}s")
+            
+            // Create ExoPlayer with enhanced configuration
             exoPlayer = ExoPlayer.Builder(context)
                 .setMediaSourceFactory(mediaSourceFactory)
+                .setLoadControl(loadControl)
                 .build()
             
             // Set up player listeners
@@ -72,6 +112,22 @@ class IPTVVideoPlayer(
                     when (playbackState) {
                         Player.STATE_READY -> {
                             isInitialized = true
+                            currentDuration = exoPlayer?.duration ?: 0L
+                            
+                            // Apply resume position when player is ready
+                            if (pendingResumePosition > 0L) {
+                                exoPlayer?.seekTo(pendingResumePosition)
+                                Log.d(TAG, "📍 Applying resume position: ${pendingResumePosition}ms")
+                                pendingResumePosition = 0L // Reset to prevent re-seeking
+                            }
+                            
+                            // Initialize position tracking
+                            currentContentId?.let { contentId ->
+                                currentContentType?.let { contentType ->
+                                    positionManager?.initializePositionTracking(contentId, contentType, currentDuration)
+                                }
+                            }
+                            
                             playerListener?.onPlayerReady()
                             playerListener?.onPlaybackStateChanged(exoPlayer?.isPlaying == true)
                         }
@@ -80,6 +136,16 @@ class IPTVVideoPlayer(
                         }
                         Player.STATE_ENDED -> {
                             playerListener?.onPlaybackStateChanged(false)
+                            
+                            // Handle episode end for auto-play
+                            playerListener?.onEpisodeEnded()
+                            
+                            // Mark content as completed
+                            currentContentId?.let { contentId ->
+                                currentContentType?.let { contentType ->
+                                    positionManager?.markAsCompleted(contentId, contentType)
+                                }
+                            }
                         }
                         Player.STATE_IDLE -> {
                             // Player is idle
@@ -133,6 +199,44 @@ class IPTVVideoPlayer(
     }
     
     /**
+     * Load video with content tracking for position management and auto-play
+     */
+    fun loadVideoWithTracking(
+        url: String,
+        contentId: String,
+        contentType: String,
+        resumePosition: Long = 0L
+    ) {
+        try {
+            this.currentContentId = contentId
+            this.currentContentType = contentType
+            this.pendingResumePosition = resumePosition
+            
+            val uri = Uri.parse(url)
+            currentUri = uri
+            
+            Log.d(TAG, "🎬 Loading video with tracking:")
+            Log.d(TAG, "   URL: $url")
+            Log.d(TAG, "   Content ID: $contentId")
+            Log.d(TAG, "   Content Type: $contentType")
+            Log.d(TAG, "   Resume Position: ${resumePosition}ms")
+            
+            // Create media item
+            val mediaItem = MediaItem.fromUri(uri)
+            
+            // Set media item to player
+            exoPlayer?.setMediaItem(mediaItem)
+            exoPlayer?.prepare()
+            
+            // Resume position will be applied when player becomes ready
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load video with tracking", e)
+            playerListener?.onPlayerError("Failed to load video: ${e.message}")
+        }
+    }
+    
+    /**
      * Play the video
      */
     fun play() {
@@ -144,6 +248,12 @@ class IPTVVideoPlayer(
      */
     fun pause() {
         exoPlayer?.pause()
+        
+        // Save current position when pausing
+        val currentPosition = exoPlayer?.currentPosition ?: 0L
+        positionManager?.updatePosition(currentPosition)
+        positionManager?.saveCurrentPosition()
+        Log.d(TAG, "📍 Position saved on pause: ${currentPosition}ms")
     }
     
     /**
@@ -151,6 +261,12 @@ class IPTVVideoPlayer(
      */
     fun stop() {
         exoPlayer?.stop()
+        
+        // Save current position when stopping
+        val currentPosition = exoPlayer?.currentPosition ?: 0L
+        positionManager?.updatePosition(currentPosition)
+        positionManager?.saveCurrentPosition()
+        Log.d(TAG, "📍 Position saved on stop: ${currentPosition}ms")
     }
     
     /**
@@ -196,13 +312,82 @@ class IPTVVideoPlayer(
     }
     
     /**
+     * Start position tracking (call this when video starts playing)
+     */
+    fun startPositionTracking() {
+        // Only start tracking once
+        if (isPositionTrackingStarted) {
+            Log.d(TAG, "Position tracking already started, skipping")
+            return
+        }
+        
+        isPositionTrackingStarted = true
+        
+        // Set up position tracking callback (only once)
+        positionManager?.onPositionLoaded = { savedPosition ->
+            playerListener?.onPositionLoaded(savedPosition)
+        }
+        
+        // Start periodic position tracking
+        startPeriodicPositionTracking()
+        
+        Log.d(TAG, "📍 Position tracking started")
+    }
+    
+    /**
+     * Start periodic position tracking every 10 seconds
+     */
+    private fun startPeriodicPositionTracking() {
+        // Cancel existing tracking job
+        positionTrackingJob?.cancel()
+        
+        positionTrackingJob = CoroutineScope(Dispatchers.Main).launch {
+            while (isActive) {
+                delay(10_000) // 10 seconds
+                
+                // Only save position if video is playing and we have content info
+                if (exoPlayer?.isPlaying == true && currentContentId != null && currentContentType != null) {
+                    val currentPosition = exoPlayer?.currentPosition ?: 0L
+                    val duration = exoPlayer?.duration ?: 0L
+                    
+                    if (duration > 0) {
+                        positionManager?.updatePosition(currentPosition)
+                        Log.d(TAG, "📍 Position saved: ${currentPosition}ms (${(currentPosition.toFloat() / duration.toFloat() * 100).toInt()}%)")
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Update position tracking (call this periodically during playback)
+     */
+    fun updatePositionTracking() {
+        val currentPosition = getCurrentPosition()
+        positionManager?.updatePosition(currentPosition)
+    }
+    
+    /**
      * Release player resources
      */
     fun release() {
         try {
+            // Cancel position tracking
+            positionTrackingJob?.cancel()
+            positionTrackingJob = null
+            
+            // Save final position before releasing
+            positionManager?.saveCurrentPosition()
+            
             exoPlayer?.release()
             exoPlayer = null
             isInitialized = false
+            currentContentId = null
+            currentContentType = null
+            currentDuration = 0L
+            pendingResumePosition = 0L
+            isPositionTrackingStarted = false
+            
             Log.d(TAG, "Player released")
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing player", e)

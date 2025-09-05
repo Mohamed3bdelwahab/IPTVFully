@@ -71,3 +71,15 @@ data class EpisodeEntity(
     val releaseDate: String?,
     val directSource: String?
 )
+
+// 🔹 Playback Position (Remember Last Position)
+@Entity(tableName = "playback_positions")
+data class PlaybackPositionEntity(
+    @PrimaryKey val contentId: String,
+    val contentType: String, // "movie", "episode", "live_stream", "vod"
+    val position: Long, // Position in milliseconds
+    val duration: Long, // Total duration in milliseconds
+    val lastUpdated: Long, // Timestamp of last update
+    val isCompleted: Boolean = false, // Whether content was completed
+    val watchPercentage: Float = 0f // Percentage watched (0.0 to 1.0)
+)

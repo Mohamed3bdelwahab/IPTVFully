@@ -69,3 +69,30 @@ interface EpisodeDao {
     @Query("DELETE FROM episodes WHERE itemId = :itemId")
     suspend fun deleteEpisodesByItemId(itemId: String)
 }
+
+@Dao
+interface PlaybackPositionDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPosition(position: PlaybackPositionEntity)
+
+    @Query("SELECT * FROM playback_positions WHERE contentId = :contentId AND contentType = :contentType")
+    suspend fun getPosition(contentId: String, contentType: String): PlaybackPositionEntity?
+
+    @Query("DELETE FROM playback_positions WHERE contentId = :contentId AND contentType = :contentType")
+    suspend fun deletePosition(contentId: String, contentType: String)
+
+    @Query("UPDATE playback_positions SET isCompleted = 1 WHERE contentId = :contentId AND contentType = :contentType")
+    suspend fun markAsCompleted(contentId: String, contentType: String)
+
+    @Query("SELECT * FROM playback_positions WHERE contentType = :contentType ORDER BY lastUpdated DESC")
+    suspend fun getRecentPositions(contentType: String): List<PlaybackPositionEntity>
+
+    @Query("SELECT * FROM playback_positions WHERE isCompleted = 0 AND watchPercentage > 0.1 ORDER BY lastUpdated DESC LIMIT :limit")
+    suspend fun getInProgressContent(limit: Int = 50): List<PlaybackPositionEntity>
+
+    @Query("DELETE FROM playback_positions WHERE lastUpdated < :cutoffTime")
+    suspend fun deleteOldPositions(cutoffTime: Long)
+
+    @Query("SELECT COUNT(*) FROM playback_positions")
+    suspend fun getPositionCount(): Int
+}

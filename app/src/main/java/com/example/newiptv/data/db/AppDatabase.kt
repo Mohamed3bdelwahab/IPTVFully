@@ -17,9 +17,11 @@ import com.example.newiptv.data.db.entities.*
         MovieCategoryEntity::class,
         MovieItemEntity::class,
         MovieInfoEntity::class,
-        MovieStreamDataEntity::class
+        MovieStreamDataEntity::class,
+        // 🔹 Playback Position Entity
+        PlaybackPositionEntity::class
     ],
-    version = 6,              // ✅ bumped to v6 to fix schema integrity
+    version = 7,              // ✅ bumped to v7 for playback position support
     exportSchema = false      // ✅ no schema export (simpler for dev)
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,6 +38,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun movieItemDao(): MovieItemDao
     abstract fun movieInfoDao(): MovieInfoDao
     abstract fun movieStreamDataDao(): MovieStreamDataDao
+
+    // 🔹 Playback Position DAO
+    abstract fun playbackPositionDao(): PlaybackPositionDao
 
     companion object {
         // 🔹 Migration v1 → v2
@@ -241,6 +246,24 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Simple version bump - let fallbackToDestructiveMigration handle schema issues
+            }
+        }
+
+        // 🔹 Migration v6 → v7 (Add playback positions table)
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create playback_positions table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS playback_positions (
+                        contentId TEXT NOT NULL PRIMARY KEY,
+                        contentType TEXT NOT NULL,
+                        position INTEGER NOT NULL,
+                        duration INTEGER NOT NULL,
+                        lastUpdated INTEGER NOT NULL,
+                        isCompleted INTEGER NOT NULL DEFAULT 0,
+                        watchPercentage REAL NOT NULL DEFAULT 0.0
+                    )
+                """.trimIndent())
             }
         }
     }
