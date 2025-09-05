@@ -27,10 +27,12 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private lateinit var binding: ActivityVideoPlayerBinding
     private lateinit var videoPlayer: IPTVVideoPlayer
     private lateinit var tvRemoteHandler: TVRemoteHandler
+    private lateinit var positionTracker: PlaybackPositionTracker
     private var speedOverlayMenu: SpeedOverlayMenu? = null
     private var playlistOverlayMenu: PlaylistOverlayMenu? = null
     private var isFullscreen = false
     private var isControlsVisible = true
+    private var isAutoPlayEnabled = true // Auto-play next episodes
     private val handler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { hideControls() }
     
@@ -40,12 +42,18 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private var currentEpisodeIndex: Int = 0
     private var episodes: List<com.example.newiptv.data.db.entities.EpisodeEntity> = emptyList()
     
+    // Video identification
+    private var currentVideoId: String? = null
+    private var contentType: String = "series" // "series" or "movie"
+    
     companion object {
         const val EXTRA_VIDEO_URL = "video_url"
         const val EXTRA_VIDEO_TITLE = "video_title"
         const val EXTRA_SERIES_ID = "series_id"
         const val EXTRA_SEASON_NUMBER = "season_number"
         const val EXTRA_EPISODE_INDEX = "episode_index"
+        const val EXTRA_CONTENT_TYPE = "content_type"
+        const val EXTRA_MOVIE_ID = "movie_id"
         private const val CONTROLS_HIDE_DELAY = 3000L // 3 seconds
         private const val PROGRESS_UPDATE_INTERVAL = 1000L // 1 second
     }
@@ -60,6 +68,7 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         setContentView(binding.root)
         
         setupPlayer()
+        setupPositionTracker()
         setupTVRemote()
         setupControls()
         setupGestures()
@@ -79,6 +88,11 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         // Set player view settings
         binding.playerView.useController = false // We'll use custom controls
         binding.playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+    }
+    
+    private fun setupPositionTracker() {
+        // Initialize position tracker
+        positionTracker = PlaybackPositionTracker(this)
     }
     
     private fun setupTVRemote() {
@@ -236,8 +250,18 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         seriesId = intent.getStringExtra(EXTRA_SERIES_ID)
         seasonNumber = intent.getIntExtra(EXTRA_SEASON_NUMBER, 1)
         currentEpisodeIndex = intent.getIntExtra(EXTRA_EPISODE_INDEX, 0)
+        contentType = intent.getStringExtra(EXTRA_CONTENT_TYPE) ?: "series"
+        
+        // Generate video ID for position tracking
+        currentVideoId = when (contentType) {
+            "movie" -> intent.getStringExtra(EXTRA_MOVIE_ID) ?: "movie_${System.currentTimeMillis()}"
+            "series" -> "${seriesId}_${seasonNumber}_${currentEpisodeIndex}"
+            else -> "video_${System.currentTimeMillis()}"
+        }
         
         android.util.Log.d("VideoPlayerActivity", "=== LOADING VIDEO ===")
+        android.util.Log.d("VideoPlayerActivity", "Content Type: $contentType")
+        android.util.Log.d("VideoPlayerActivity", "Video ID: $currentVideoId")
         android.util.Log.d("VideoPlayerActivity", "Series ID: $seriesId")
         android.util.Log.d("VideoPlayerActivity", "Season Number: $seasonNumber")
         android.util.Log.d("VideoPlayerActivity", "Episode Index: $currentEpisodeIndex")
@@ -248,6 +272,9 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             binding.tvTitle.text = videoTitle ?: "Video Player"
             videoPlayer.loadVideo(videoUrl)
             
+            // Start position tracking
+            startPositionTracking()
+            
             // Load episodes for navigation if series ID is available
             if (seriesId != null) {
                 loadEpisodesForNavigation()
@@ -257,6 +284,7 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             val testUrl = "http://aws85485.amazonedge.net/series/moh7amed819/150730/172237.mkv"
             binding.tvTitle.text = "Test Video (MKV)"
             videoPlayer.loadVideo(testUrl)
+            startPositionTracking()
         }
     }
     
@@ -314,6 +342,56 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                 e.printStackTrace()
             }
         }
+    }
+    
+    private fun startPositionTracking() {
+        if (currentVideoId != null && videoPlayer.isReady()) {
+            positionTracker.startTracking(
+                videoId = currentVideoId!!,
+                contentType = contentType,
+                exoPlayer = videoPlayer.getPlayer()!!,
+                seriesId = seriesId,
+                seasonNumber = seasonNumber,
+                episodeNumber = if (episodes.isNotEmpty() && currentEpisodeIndex < episodes.size) episodes[currentEpisodeIndex].episodeNum else null
+            )
+            
+            // Check for saved position and resume
+            checkAndResumePosition()
+        }
+    }
+    
+    private fun checkAndResumePosition() {
+        if (currentVideoId == null) return
+        
+        // Check for saved position in background
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val savedPosition = positionTracker.getSavedPosition(currentVideoId!!)
+                if (savedPosition != null && savedPosition.position > 10000) { // Only resume if more than 10 seconds
+                    runOnUiThread {
+                        // Show resume notification
+                        showResumeNotification(savedPosition.position, savedPosition.duration)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("VideoPlayerActivity", "Failed to check saved position", e)
+            }
+        }
+    }
+    
+    private fun showResumeNotification(position: Long, duration: Long) {
+        val positionText = formatTime(position)
+        val durationText = formatTime(duration)
+        
+        // Show resume notification for 3 seconds
+        binding.tvResumeNotification.text = "Resuming from $positionText"
+        binding.tvResumeNotification.visibility = View.VISIBLE
+        
+        // Auto-hide after 3 seconds and resume
+        handler.postDelayed({
+            binding.tvResumeNotification.visibility = View.GONE
+            videoPlayer.seekTo(position)
+        }, 3000)
     }
     
     private fun showControls() {
@@ -403,6 +481,9 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             binding.btnPlayPause.setImageResource(R.drawable.ic_play)
             binding.progressBar.visibility = View.GONE
             updateProgress()
+            
+            // Start position tracking when player is ready
+            startPositionTracking()
         }
     }
     
@@ -424,7 +505,14 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     }
     
     override fun onProgressChanged(position: Long, duration: Long) {
-        // Handled by updateProgress()
+        // Check for auto-play when near end of video
+        if (duration > 0 && position > 0) {
+            val remainingTime = duration - position
+            if (remainingTime < 10000 && isAutoPlayEnabled && contentType == "series") { // Less than 10 seconds remaining
+                // Auto-play next episode
+                playNextEpisode()
+            }
+        }
     }
     
     override fun onBufferingChanged(isBuffering: Boolean) {
@@ -450,6 +538,7 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         speedOverlayMenu = null
         playlistOverlayMenu?.destroy()
         playlistOverlayMenu = null
+        positionTracker.destroy()
         tvRemoteHandler.destroy()
         videoPlayer.release()
     }
@@ -629,11 +718,23 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             android.util.Log.d("VideoPlayerActivity", "Episode directSource: ${episode.directSource}")
             
             if (!episode.directSource.isNullOrEmpty()) {
+                // Stop current position tracking
+                positionTracker.stopTracking()
+                
+                // Update current episode index
+                currentEpisodeIndex = index
+                
+                // Generate new video ID for this episode
+                currentVideoId = "${seriesId}_${seasonNumber}_${index}"
+                
                 // Update title
                 binding.tvTitle.text = episode.title
                 
                 // Load and play the episode
                 videoPlayer.loadVideo(episode.directSource)
+                
+                // Start position tracking for new episode
+                startPositionTracking()
                 
                 // Show controls briefly
                 showControlsTemporarily()
