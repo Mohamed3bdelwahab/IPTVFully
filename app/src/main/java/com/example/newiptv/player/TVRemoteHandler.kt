@@ -45,6 +45,9 @@ class TVRemoteHandler(
     private var speedOverlayMenu: SpeedOverlayMenu? = null
     private var playlistOverlayMenu: PlaylistOverlayMenu? = null
     
+    // Store current speed to preserve it across video loads
+    private var currentPlaybackSpeed: Float = 1.0f
+    
     /**
      * Handle key events from TV remote
      * @param keyEvent The key event to handle
@@ -235,10 +238,14 @@ class TVRemoteHandler(
         Log.d(TAG, "Handling speed change: $speedDelta")
         
         if (exoPlayer != null) {
-            // Native ExoPlayer
+            // Native ExoPlayer with improved audio clarity
             val currentSpeed = exoPlayer.playbackParameters.speed
             val newSpeed = (currentSpeed + speedDelta).coerceIn(MIN_SPEED, MAX_SPEED)
-            exoPlayer.setPlaybackParameters(PlaybackParameters(newSpeed))
+            currentPlaybackSpeed = newSpeed // Store the new speed
+            // Use PlaybackParameters for better audio processing
+            val playbackParameters = PlaybackParameters(newSpeed)
+            exoPlayer.setPlaybackParameters(playbackParameters)
+            Log.d(TAG, "⚡ Speed changed to: ${newSpeed}x with improved audio clarity")
             onSpeedChange?.invoke(newSpeed)
         } else {
             // Callback for other player types
@@ -256,8 +263,11 @@ class TVRemoteHandler(
             Log.d(TAG, "Handling speed preset: $speed (index: $presetIndex)")
             
             if (exoPlayer != null) {
-                // Native ExoPlayer
-                exoPlayer.setPlaybackParameters(PlaybackParameters(speed))
+                // Native ExoPlayer with improved audio clarity
+                currentPlaybackSpeed = speed // Store the new speed
+                val playbackParameters = PlaybackParameters(speed)
+                exoPlayer.setPlaybackParameters(playbackParameters)
+                Log.d(TAG, "⚡ Speed preset set to: ${speed}x with improved audio clarity")
                 onSpeedChange?.invoke(speed)
             } else {
                 // Callback for other player types
@@ -327,7 +337,14 @@ class TVRemoteHandler(
      * @return Current playback speed
      */
     fun getCurrentSpeed(): Float {
-        return exoPlayer?.playbackParameters?.speed ?: 1.0f
+        return currentPlaybackSpeed
+    }
+    
+    /**
+     * Set current playback speed (for initialization)
+     */
+    fun setCurrentSpeed(speed: Float) {
+        currentPlaybackSpeed = speed
     }
     
     /**

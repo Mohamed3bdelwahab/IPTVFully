@@ -7,8 +7,13 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Permissions for querying other apps (Android 15+) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" 
+        tools:ignore="QueryAllPackagesPermission" />
 
     <application
+        android:name=".NewIPTVApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -68,6 +73,34 @@
             android:exported="false"
             android:theme="@style/Theme.NewIPTV.NoActionBar"
             android:screenOrientation="landscape" />
+            
+        <!-- History Screen Activity -->
+        <activity
+            android:name=".ui.history.HistoryScreen"
+            android:exported="false"
+            android:theme="@style/Theme.NewIPTV.NoActionBar"
+            android:screenOrientation="landscape" />
+
+        <!-- Favorites Screen Activity -->
+        <activity
+            android:name=".ui.favorites.FavoritesScreen"
+            android:exported="false"
+            android:theme="@style/Theme.NewIPTV.NoActionBar"
+            android:screenOrientation="landscape" />
+
+        <!-- Playlist Details Activity -->
+        <activity
+            android:name=".ui.favorites.PlaylistDetailsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NewIPTV.NoActionBar"
+            android:screenOrientation="landscape" />
+
+        <!-- Global Search Activity -->
+        <activity
+            android:name=".ui.search.GlobalSearchScreen"
+            android:exported="false"
+            android:theme="@style/Theme.NewIPTV.NoActionBar"
+            android:screenOrientation="landscape" />
         
         <!-- Video Player Activity -->
         <activity
@@ -77,17 +110,26 @@
             android:theme="@style/Theme.NewIPTV.NoActionBar"
             android:screenOrientation="sensor" />
             
-        <!-- Test Video Player Activity -->
+        <!-- MX Video Player Activity -->
         <activity
-            android:name=".TestVideoPlayerActivity"
-            android:exported="true"
-            android:theme="@style/Theme.NewIPTV.NoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:name=".player.MXVideoPlayerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.NewIPTV.NoActionBar"
+            android:screenOrientation="sensor" />
+            
+        <!-- Settings Activity -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NewIPTV.NoActionBar"
+            android:screenOrientation="landscape" />
             
     </application>
+
+    <!-- Queries for MX Player detection -->
+    <queries>
+        <package android:name="com.mxtech.videoplayer.ad" />
+    </queries>
 
 </manifest>

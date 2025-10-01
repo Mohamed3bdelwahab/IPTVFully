@@ -15,24 +15,6 @@
         android:background="@drawable/panel_background_with_border"
         android:padding="16dp">
 
-        <!-- Filter Spinner -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Filter Movies"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
-
-        <Spinner
-            android:id="@+id/filterSpinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/spinner_background"
-            android:popupBackground="@color/panel_background"
-            android:layout_marginBottom="16dp"/>
-
         <!-- Categories Title -->
         <TextView
             android:layout_width="match_parent"
@@ -42,6 +24,23 @@
             android:textSize="20sp"
             android:textStyle="bold"
             android:layout_marginBottom="16dp"/>
+
+        <!-- Search Bar -->
+        <EditText
+            android:id="@+id/searchEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Search movies..."
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:background="@drawable/search_input_background"
+            android:padding="12dp"
+            android:textSize="14sp"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:layout_marginBottom="16dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
         <!-- Categories List -->
         <ListView
@@ -75,6 +74,11 @@
             android:textSize="24sp"
             android:textStyle="bold"
             android:layout_marginBottom="16dp"/>
+
+        <!-- Advanced Filter Row -->
+        <include
+            android:id="@+id/filterRow"
+            layout="@layout/filter_row" />
 
         <!-- Movies Grid -->
         <androidx.recyclerview.widget.RecyclerView

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/background_dark"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/dialogTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add to Favorites"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Message -->
+    <TextView
+        android:id="@+id/dialogMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Choose a playlist to add to:"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Playlist List -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="400dp"
+        android:layout_marginBottom="24dp">
+
+        <LinearLayout
+            android:id="@+id/playlistContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Create New Playlist Button -->
+            <Button
+                android:id="@+id/createNewPlaylistButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="➕ Create New Playlist"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@drawable/button_background"
+                android:layout_marginBottom="12dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:nextFocusDown="@+id/playlistRecyclerView" />
+
+            <!-- Existing Playlists -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/playlistRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:focusable="true"
+                android:nextFocusUp="@+id/createNewPlaylistButton" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/cancelButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="Cancel"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            android:background="@drawable/button_background"
+            android:padding="16dp"
+            android:minWidth="100dp"
+            android:focusable="true"
+            android:clickable="true"
+            android:layout_marginEnd="12dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -207,4 +207,56 @@ class TvRepository(
             else emit(Result.failure(e))
         }
     }
+
+    // ------------------------------------------------
+    // 🔹 Bulk Data Access (for daily sync)
+    // ------------------------------------------------
+    
+    /**
+     * Get ALL series from database (no API calls)
+     */
+    fun getAllSeries(): Flow<List<ItemEntity>> = 
+        itemDao.getAllItemsByType("series")
+    
+    /**
+     * Get ALL movies from database (no API calls)
+     */
+    fun getAllMovies(): Flow<List<ItemEntity>> = 
+        itemDao.getAllItemsByType("movie")
+    
+    /**
+     * Search across ALL series and movies
+     */
+    fun searchAllContent(query: String): Flow<List<ItemEntity>> = 
+        itemDao.searchAllContent(query)
+    
+    /**
+     * Search in specific type (series or movies)
+     */
+    fun searchContentByType(type: String, query: String): Flow<List<ItemEntity>> = 
+        itemDao.searchContentByType(type, query)
+    
+    /**
+     * Get ALL series synchronously (for sync worker)
+     */
+    suspend fun getAllSeriesSync(): List<ItemEntity> = 
+        itemDao.getAllItemsByTypeSync("series")
+    
+    /**
+     * Get ALL movies synchronously (for sync worker)
+     */
+    suspend fun getAllMoviesSync(): List<ItemEntity> = 
+        itemDao.getAllItemsByTypeSync("movie")
+    
+    /**
+     * Get item count for a specific category
+     */
+    suspend fun getItemCountByCategory(categoryId: String, type: String): Int = 
+        itemDao.getItemCountByCategory(categoryId, type)
+    
+    /**
+     * Get total item count for a type
+     */
+    suspend fun getTotalItemCountByType(type: String): Int = 
+        itemDao.getTotalItemCountByType(type)
 }

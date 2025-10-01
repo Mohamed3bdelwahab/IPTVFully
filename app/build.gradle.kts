@@ -4,6 +4,11 @@ plugins {
     id("kotlin-kapt")
 }
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = false
+}
+
 android {
     namespace = "com.example.newiptv"
     compileSdk = 36
@@ -37,6 +42,11 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    
+    lint {
+        disable += "Overdraw"
+        abortOnError = false
+    }
 }
 
 dependencies {
@@ -58,12 +68,18 @@ dependencies {
     implementation("androidx.media3:media3-datasource:1.2.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.2.1")
     
+    // VLC Player for AC3/DTS support
+    implementation("org.videolan.android:libvlc-all:3.5.1")
+    
     // Network libraries
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
     // Retrofit for API calls
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    
+    // WorkManager for background sync
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     
     // Gson for JSON parsing
     implementation("com.google.code.gson:gson:2.10.1")

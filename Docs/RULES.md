@@ -78,7 +78,7 @@ also for archticte that will updated after add , update delete fun , future from
 
 ### **10. APP TESTING & DEPLOYMENT**
 - [ ] **Install app**: Build and install on target device
-- [ ] **Launch app**: `"$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s 192.168.8.20:5555 shell am start -n com.example.iptvtv/.MainActivity`
+- [ ] **Launch app**: `"$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s 192.168.8.20:5555 shell am start -n com.example.iptvtv/.HomeScreen`
 - [ ] **Test functionality** thoroughly
 - [ ] **Monitor for crashes** or errors
 - [ ] **Test user interactions** and UI responsiveness

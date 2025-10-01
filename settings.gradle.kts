@@ -16,8 +16,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        jcenter() // For IjkPlayer dependencies
-        maven { url = uri("https://jitpack.io") } // For some FFmpeg dependencies
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

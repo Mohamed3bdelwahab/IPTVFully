@@ -6,7 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object MovieApiClient {
     
     // 🔹 Hydra API Client
-    private const val HYDRA_BASE_URL = "http://hydraa.cc:2095/"
+    private const val HYDRA_BASE_URL = "http://aws85485.amazonedge.net/"
     
     val hydraApi: MovieApi by lazy {
         Retrofit.Builder()

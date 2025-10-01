@@ -28,31 +28,22 @@
             android:layout_marginBottom="16dp"
             android:fontFamily="sans-serif-medium" />
 
-        <!-- Filter Spinner - Moved above categories -->
-        <LinearLayout
+        <!-- Search Bar -->
+        <EditText
+            android:id="@+id/searchEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Filter:"
-                android:textSize="14sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginBottom="4dp"
-                android:fontFamily="sans-serif" />
-
-            <Spinner
-                android:id="@+id/filterSpinner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/spinner_background"
-                android:padding="8dp"
-                android:minHeight="40dp" />
-
-        </LinearLayout>
+            android:hint="Search series..."
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:background="@drawable/search_input_background"
+            android:padding="12dp"
+            android:textSize="14sp"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:layout_marginBottom="16dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
         <!-- Category List -->
         <ListView
@@ -88,6 +79,11 @@
             android:gravity="center"
             android:layout_marginBottom="16dp"
             android:fontFamily="sans-serif-medium" />
+
+        <!-- Advanced Filter Row -->
+        <include
+            android:id="@+id/filterRow"
+            layout="@layout/filter_row" />
 
         <!-- Series Grid -->
         <FrameLayout

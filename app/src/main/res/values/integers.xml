@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default (phone) grid layout -->
+    <integer name="menu_column_count">2</integer>
+    <integer name="menu_row_count">4</integer>
+</resources>

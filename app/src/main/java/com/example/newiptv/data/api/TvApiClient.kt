@@ -4,7 +4,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object TvApiClient {
-    private const val BASE_URL = "http://hydraa.cc:2095/"
+    private const val BASE_URL = "http://aws85485.amazonedge.net/"
 
     val api: TvApi by lazy {
         Retrofit.Builder()

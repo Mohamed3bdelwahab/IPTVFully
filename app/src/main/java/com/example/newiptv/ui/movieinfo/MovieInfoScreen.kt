@@ -5,8 +5,10 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -15,6 +17,9 @@ import com.example.newiptv.data.db.DatabaseProvider
 import com.example.newiptv.data.db.entities.InfoEntity
 import com.example.newiptv.data.mapping.ApiTVMapping
 import com.example.newiptv.data.repository.TvRepository
+import com.example.newiptv.data.repository.FavoritePlaylistRepository
+import com.example.newiptv.data.db.entities.FavoritePlaylistEntity
+import com.example.newiptv.ui.favorites.PlaylistDialogAdapter
 import com.example.newiptv.player.VideoPlayerActivity
 import com.example.newiptv.utils.KeyEventLogger
 import kotlinx.coroutines.flow.collectLatest
@@ -40,9 +45,11 @@ class MovieInfoScreen : AppCompatActivity() {
     private lateinit var watchMovieButton: Button
 
     private lateinit var repository: TvRepository
+    private lateinit var favoritePlaylistRepository: FavoritePlaylistRepository
     private var movieId: String = ""
     private var movieName: String = ""
     private var movieCategory: String = ""
+    private var isFavoriteButtonFocused = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +67,12 @@ class MovieInfoScreen : AppCompatActivity() {
 
         val database = DatabaseProvider.getDatabase(this)
         repository = TvRepository(database)
+        favoritePlaylistRepository = FavoritePlaylistRepository(database.favoritePlaylistDao())
+        
+        // Initialize default playlists if needed
+        lifecycleScope.launch {
+            favoritePlaylistRepository.createDefaultPlaylistsIfNeeded()
+        }
 
         initializeViews()
         setupTVRemoteNavigation()
@@ -84,6 +97,27 @@ class MovieInfoScreen : AppCompatActivity() {
         loadingText = findViewById(R.id.loadingText)
         errorText = findViewById(R.id.errorText)
         watchMovieButton = findViewById<Button>(R.id.watchMovieButton)
+        
+        // Initialize favorite button
+        val favoriteButton = findViewById<ImageButton>(R.id.favoriteButton)
+        favoriteButton.setOnClickListener {
+            showFavoriteDialog()
+        }
+        
+        // Make favorite button focusable for TV remote
+        favoriteButton.isFocusable = true
+        favoriteButton.isFocusableInTouchMode = true
+        
+        // Add focus change listener for visual feedback
+        favoriteButton.setOnFocusChangeListener { _, hasFocus ->
+            isFavoriteButtonFocused = hasFocus
+            if (hasFocus) {
+                android.util.Log.d("MovieInfoScreen", "🎯 Favorite button focused")
+                favoriteButton.background = getDrawable(R.drawable.button_focused_background)
+            } else {
+                favoriteButton.background = getDrawable(R.drawable.button_background)
+            }
+        }
 
         // Set initial title
         title = "Movie Info: $movieName"
@@ -102,10 +136,41 @@ class MovieInfoScreen : AppCompatActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (isFavoriteButtonFocused) {
+                        // Stay on favorite button
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (isFavoriteButtonFocused) {
+                        // Move to watch movie button
+                        moveToWatchMovieButton()
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (isFavoriteButtonFocused) {
+                        // Stay on favorite button
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (isFavoriteButtonFocused) {
+                        // Stay on favorite button
+                        return true
+                    }
+                }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    // Play movie
-                    playMovie()
-                    return true
+                    if (isFavoriteButtonFocused) {
+                        android.util.Log.d("MovieInfoScreen", "✅ Favorite button selected")
+                        showFavoriteDialog()
+                        return true
+                    } else {
+                        // Play movie
+                        playMovie()
+                        return true
+                    }
                 }
                 KeyEvent.KEYCODE_BACK -> {
                     android.util.Log.d("MovieInfoScreen", "BACK key pressed - finishing activity")
@@ -116,6 +181,12 @@ class MovieInfoScreen : AppCompatActivity() {
         }
         
         return super.dispatchKeyEvent(event)
+    }
+    
+    private fun moveToWatchMovieButton() {
+        isFavoriteButtonFocused = false
+        watchMovieButton.requestFocus()
+        android.util.Log.d("MovieInfoScreen", "🎯 Moved focus to Watch Movie button")
     }
 
     private fun loadMovieInfo() {
@@ -198,5 +269,191 @@ class MovieInfoScreen : AppCompatActivity() {
         // Log the action
         KeyEventLogger.logScreenEvent("MovieInfoScreen", "Playing movie")
         KeyEventLogger.logScreenEvent("MovieInfoScreen", "Movie playback started")
+    }
+    
+    private fun showFavoriteDialog() {
+        lifecycleScope.launch {
+            try {
+                android.util.Log.d("MovieInfoScreen", "🔍 Getting playlists for favorite dialog...")
+                
+                // Ensure default playlists are created first
+                favoritePlaylistRepository.createDefaultPlaylistsIfNeeded()
+                
+                val playlists = favoritePlaylistRepository.getAllPlaylistsSync()
+                android.util.Log.d("MovieInfoScreen", "📋 Found ${playlists.size} playlists: ${playlists.map { it.name }}")
+                
+                runOnUiThread {
+                    showCustomFavoriteDialog(playlists)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MovieInfoScreen", "❌ Failed to show favorite dialog", e)
+                e.printStackTrace()
+            }
+        }
+    }
+    
+    private fun showCustomFavoriteDialog(playlists: List<FavoritePlaylistEntity>) {
+        android.util.Log.d("MovieInfoScreen", "🎨 Creating custom favorite dialog...")
+        
+        // Create custom dialog
+        val dialog = android.app.Dialog(this)
+        dialog.setContentView(R.layout.dialog_favorite_playlist)
+        dialog.setCancelable(true)
+        
+        // Get dialog views
+        val dialogTitle = dialog.findViewById<android.widget.TextView>(R.id.dialogTitle)
+        val dialogMessage = dialog.findViewById<android.widget.TextView>(R.id.dialogMessage)
+        val createNewPlaylistButton = dialog.findViewById<android.widget.Button>(R.id.createNewPlaylistButton)
+        val playlistRecyclerView = dialog.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.playlistRecyclerView)
+        val cancelButton = dialog.findViewById<android.widget.Button>(R.id.cancelButton)
+        
+        // Set dialog content
+        dialogTitle.text = "Add to Favorites"
+        dialogMessage.text = "Choose a playlist to add '${movieName}' to:"
+        
+        // Setup create new playlist button
+        createNewPlaylistButton.setOnClickListener {
+            android.util.Log.d("MovieInfoScreen", "➕ Create new playlist button clicked")
+            dialog.dismiss()
+            showCreatePlaylistDialog()
+        }
+        
+        // Setup playlist RecyclerView
+        playlistRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        val adapter = PlaylistDialogAdapter(playlists) { playlist ->
+            android.util.Log.d("MovieInfoScreen", "📝 Adding to playlist: ${playlist.name}")
+            dialog.dismiss()
+            addToPlaylist(playlist.id)
+        }
+        playlistRecyclerView.adapter = adapter
+        
+        // Setup cancel button
+        cancelButton.setOnClickListener {
+            android.util.Log.d("MovieInfoScreen", "❌ Dialog cancelled")
+            dialog.dismiss()
+        }
+        
+        // Setup TV remote navigation
+        setupDialogNavigation(dialog, createNewPlaylistButton, playlistRecyclerView, cancelButton)
+        
+        // Show dialog
+        dialog.show()
+        
+        // Set initial focus
+        createNewPlaylistButton.requestFocus()
+        
+        android.util.Log.d("MovieInfoScreen", "✅ Custom dialog created and shown with ${playlists.size} playlists")
+    }
+    
+    private fun setupDialogNavigation(
+        dialog: android.app.Dialog,
+        createButton: android.widget.Button,
+        recyclerView: androidx.recyclerview.widget.RecyclerView,
+        cancelButton: android.widget.Button
+    ) {
+        // Handle key events for TV remote navigation
+        dialog.setOnKeyListener { _, keyCode, event ->
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        if (createButton.hasFocus()) {
+                            recyclerView.requestFocus()
+                            return@setOnKeyListener true
+                        }
+                    }
+                    android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                        if (recyclerView.hasFocus()) {
+                            createButton.requestFocus()
+                            return@setOnKeyListener true
+                        }
+                    }
+                    android.view.KeyEvent.KEYCODE_BACK -> {
+                        dialog.dismiss()
+                        return@setOnKeyListener true
+                    }
+                }
+            }
+            false
+        }
+    }
+    
+    private fun showCreatePlaylistDialog() {
+        val input = android.widget.EditText(this).apply {
+            hint = "Enter playlist name"
+            setPadding(32, 16, 32, 16)
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("Create New Playlist")
+            .setMessage("Enter a name for your new playlist:")
+            .setView(input)
+            .setPositiveButton("Create") { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    createPlaylistAndAdd(name)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun createPlaylistAndAdd(name: String) {
+        lifecycleScope.launch {
+            try {
+                val playlist = favoritePlaylistRepository.createPlaylist(name)
+                addToPlaylist(playlist.id)
+                android.util.Log.d("MovieInfoScreen", "✅ Created playlist and added movie: $name")
+            } catch (e: Exception) {
+                android.util.Log.e("MovieInfoScreen", "❌ Failed to create playlist", e)
+            }
+        }
+    }
+    
+    private fun addToPlaylist(playlistId: String) {
+        lifecycleScope.launch {
+            try {
+                val success = favoritePlaylistRepository.addItemToPlaylist(
+                    playlistId = playlistId,
+                    contentId = movieId,
+                    contentType = "movie",
+                    title = movieName,
+                    cover = null,
+                    streamUrl = null,
+                    seriesId = null,
+                    seasonNumber = null,
+                    episodeNumber = null
+                )
+                
+                if (success) {
+                    android.util.Log.d("MovieInfoScreen", "✅ Added movie to playlist: $movieName")
+                    // Show success message and change heart color
+                    runOnUiThread {
+                        android.widget.Toast.makeText(this@MovieInfoScreen, "Added to favorites!", android.widget.Toast.LENGTH_SHORT).show()
+                        updateFavoriteButtonState(true)
+                    }
+                } else {
+                    android.util.Log.d("MovieInfoScreen", "⚠️ Movie already in playlist")
+                    runOnUiThread {
+                        android.widget.Toast.makeText(this@MovieInfoScreen, "Already in favorites!", android.widget.Toast.LENGTH_SHORT).show()
+                        updateFavoriteButtonState(true)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MovieInfoScreen", "❌ Failed to add to playlist", e)
+            }
+        }
+    }
+    
+    private fun updateFavoriteButtonState(isInFavorites: Boolean) {
+        val favoriteButton = findViewById<ImageButton>(R.id.favoriteButton)
+        if (isInFavorites) {
+            // Change to filled heart (red)
+            favoriteButton.setImageResource(R.drawable.ic_favorite_filled)
+            favoriteButton.setColorFilter(getColor(R.color.red))
+        } else {
+            // Change to border heart (white)
+            favoriteButton.setImageResource(R.drawable.ic_favorite_border)
+            favoriteButton.setColorFilter(getColor(R.color.white))
+        }
     }
 }

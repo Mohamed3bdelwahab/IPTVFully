@@ -59,5 +59,42 @@
     
     <!-- Error and Status Colors -->
     <color name="error_color">#FFFF5252</color> <!-- Bright Red for errors -->
+    
+    <!-- Settings Screen Colors -->
+    <color name="primary_color">#FF2196F3</color> <!-- Blue -->
+    <color name="secondary_color">#FF757575</color> <!-- Gray -->
+    <color name="input_background">#FF2A2A3A</color> <!-- Dark gray -->
+    <color name="input_border">#FF404040</color> <!-- Medium gray -->
+    <color name="text_hint">#FF808080</color> <!-- Light gray -->
+
+    <!-- Filter UI Colors -->
+    <color name="background_light">#FF2A2A3A</color> <!-- Light background for filters -->
+    <color name="border_color">#FF404040</color> <!-- Border color for filter elements -->
+    
+    <!-- Filter Focus Colors -->
+    <color name="filter_normal_background">#FF2A2A3A</color> <!-- Normal filter background -->
+    <color name="filter_normal_border">#FF404040</color> <!-- Normal filter border -->
+    <color name="filter_focused_background">#FF3A3A4A</color> <!-- Focused filter background -->
+    <color name="filter_focused_border">#FF40C4FF</color> <!-- Bright blue focus border -->
+    
+    <!-- Button Focus Colors -->
+    <color name="button_secondary_background">#FF2A2A3A</color> <!-- Normal button background -->
+    <color name="button_secondary_border">#FF404040</color> <!-- Normal button border -->
+    <color name="button_clear_focused_background">#FF3A3A4A</color> <!-- Focused clear button background -->
+    <color name="button_clear_focused_border">#FF40C4FF</color> <!-- Focused clear button border -->
+
+    <!-- History Screen Colors -->
+    <color name="image_background">#FF1E1E2E</color> <!-- Dark background for images -->
+    <color name="placeholder_background">#FF2A2A3A</color> <!-- Background for placeholder images -->
+    
+    <!-- Favorites Screen Colors -->
+    <color name="text_tertiary">#FF808080</color> <!-- Tertiary text color -->
+    
+    <!-- Item Focus Colors -->
+    <color name="item_focused_bg">#FF3A3A4A</color> <!-- Focused item background -->
+    <color name="item_default_bg">#FF2A2A3A</color> <!-- Default item background -->
+    
+    <!-- Heart Colors -->
+    <color name="red">#FFFF0000</color> <!-- Red for filled heart -->
 
 </resources>

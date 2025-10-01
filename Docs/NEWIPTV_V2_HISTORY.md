@@ -42,7 +42,7 @@
 
 ### **V1 Architecture (Completed)**
 ```
-MainActivity → TestVideoPlayerActivity → VideoPlayerActivity
+MainActivity  → VideoPlayerActivity
                                     ↓
                               IPTVVideoPlayer
                                     ↓

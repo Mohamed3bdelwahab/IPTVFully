@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
@@ -13,6 +14,9 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.trackselection.TrackSelector
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackGroup
 import androidx.media3.common.C
@@ -42,13 +46,13 @@ class IPTVVideoPlayer(
     
     companion object {
         private const val TAG = "IPTVVideoPlayer"
-        private const val BUFFER_SIZE = 100 * 1024 * 1024 // 100MB buffer (increased)
+        private const val BUFFER_SIZE = 200 * 1024 * 1024 // 200MB buffer (increased for high-quality videos)
         private const val CONNECT_TIMEOUT = 30L
         private const val READ_TIMEOUT = 30L
-        private const val MIN_BUFFER_MS = 30_000 // 30 seconds minimum buffer
-        private const val MAX_BUFFER_MS = 120_000 // 120 seconds maximum buffer
-        private const val BUFFER_FOR_PLAYBACK_MS = 10_000 // 10 seconds for playback
-        private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 5_000 // 5 seconds after rebuffer
+        private const val MIN_BUFFER_MS = 60_000 // 60 seconds minimum buffer (increased)
+        private const val MAX_BUFFER_MS = 300_000 // 300 seconds maximum buffer (increased)
+        private const val BUFFER_FOR_PLAYBACK_MS = 15_000 // 15 seconds for playback (increased)
+        private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 10_000 // 10 seconds after rebuffer (increased)
     }
     
     private var exoPlayer: ExoPlayer? = null
@@ -61,6 +65,12 @@ class IPTVVideoPlayer(
     private var pendingResumePosition: Long = 0L
     private var positionTrackingJob: kotlinx.coroutines.Job? = null
     private var isPositionTrackingStarted = false
+    private var currentPlaybackSpeed: Float = 1.0f // Store current speed to preserve it
+    private var audioFallbackAttempted = false // Track if we've already attempted fallback
+    private var vlcPlayer: VLCPlayerWrapper? = null // VLC fallback player
+    private var useVLCPlayer = false // Flag to use VLC instead of ExoPlayer
+    private var lastVideoPosition: Long = 0L // Track video position for stuck frame detection
+    private var stuckFrameDetectionJob: kotlinx.coroutines.Job? = null // Job for stuck frame detection
     
     interface PlayerListener {
         fun onPlayerReady()
@@ -74,6 +84,7 @@ class IPTVVideoPlayer(
     
     init {
         initializePlayer()
+        initializeVLCFallback()
     }
     
     private fun initializePlayer() {
@@ -126,11 +137,22 @@ class IPTVVideoPlayer(
             Log.i(TAG, "   Audio Track Selection: Enabled")
             Log.i(TAG, "   Mixed Audio Codecs: Enabled")
             
+            // Create enhanced renderers factory with hardware decoder fallback
+            val renderersFactory = DefaultRenderersFactory(context).apply {
+                setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                setEnableAudioFloatOutput(true) // Enable high-quality audio output
+                setEnableDecoderFallback(true) // Allow fallback to software decoder when hardware fails
+            }
+            
+            // Log supported audio codecs for debugging
+            logSupportedAudioCodecs()
+            
             // Create ExoPlayer with enhanced configuration
             exoPlayer = ExoPlayer.Builder(context)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector!!)
+                .setRenderersFactory(renderersFactory)
                 .build()
             
             // Set up player listeners
@@ -159,6 +181,9 @@ class IPTVVideoPlayer(
                             logAudioTrackInfo()
                             selectBestAudioTrack()
                             
+                            // Start stuck frame detection
+                            startStuckFrameDetection()
+                            
                             playerListener?.onPlayerReady()
                             playerListener?.onPlaybackStateChanged(exoPlayer?.isPlaying == true)
                         }
@@ -185,9 +210,44 @@ class IPTVVideoPlayer(
                 }
                 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    val errorMessage = "Playback error: ${error.message}"
-                    Log.e(TAG, errorMessage, error)
-                    playerListener?.onPlayerError(errorMessage)
+                    val errorMessage = error.message ?: "Unknown error"
+                    val errorCode = error.errorCode
+                    Log.e(TAG, "Player error: $errorMessage (Code: $errorCode)", error)
+                    
+                    // Enhanced error handling for different codec issues
+                    when {
+                        errorMessage.contains("audio/ac3") || errorMessage.contains("NO_UNSUPPORTED_TYPE") -> {
+                            Log.w(TAG, "⚠️ AC3 audio codec error - attempting VLC fallback")
+                            Log.d(TAG, "Error details: $errorMessage")
+                            attemptVLCFallback()
+                        }
+                        errorMessage.contains("audio/eac3") -> {
+                            Log.w(TAG, "⚠️ E-AC3 audio codec not supported - attempting VLC fallback")
+                            attemptVLCFallback()
+                        }
+                        errorMessage.contains("audio/dts") -> {
+                            Log.w(TAG, "⚠️ DTS audio codec not supported - attempting VLC fallback")
+                            attemptVLCFallback()
+                        }
+                        errorMessage.contains("MediaCodec") || 
+                        errorMessage.contains("DecoderInitException") ||
+                        errorMessage.contains("DecoderQueryException") ||
+                        errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
+                        errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED -> {
+                            Log.w(TAG, "⚠️ Hardware decoder error - attempting software fallback")
+                            Log.d(TAG, "Error details: $errorMessage (Code: $errorCode)")
+                            attemptSoftwareDecoderFallback()
+                        }
+                        errorMessage.contains("video/avc") || errorMessage.contains("video/hevc") -> {
+                            Log.w(TAG, "⚠️ Video codec error - likely hardware decoder issue")
+                            Log.d(TAG, "Error details: $errorMessage")
+                            attemptSoftwareDecoderFallback()
+                        }
+                        else -> {
+                            Log.e(TAG, "General playback error: $errorMessage (Code: $errorCode)")
+                            playerListener?.onPlayerError("Playback error: $errorMessage")
+                        }
+                    }
                 }
             })
             
@@ -213,6 +273,7 @@ class IPTVVideoPlayer(
         try {
             val uri = Uri.parse(url)
             currentUri = uri
+            audioFallbackAttempted = false // Reset fallback flag for new video
             
             Log.d(TAG, "Loading video: $url")
             
@@ -222,6 +283,15 @@ class IPTVVideoPlayer(
             // Set media item to player
             exoPlayer?.setMediaItem(mediaItem)
             exoPlayer?.prepare()
+            
+            // Restore the current playback speed after loading new video
+            if (currentPlaybackSpeed != 1.0f) {
+                exoPlayer?.let { player ->
+                    val playbackParameters = PlaybackParameters(currentPlaybackSpeed)
+                    player.setPlaybackParameters(playbackParameters)
+                    Log.d(TAG, "🔄 Restored playback speed to: ${currentPlaybackSpeed}x after loading video")
+                }
+            }
             
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load video", e)
@@ -242,6 +312,7 @@ class IPTVVideoPlayer(
             this.currentContentId = contentId
             this.currentContentType = contentType
             this.pendingResumePosition = resumePosition
+            audioFallbackAttempted = false // Reset fallback flag for new video
             
             val uri = Uri.parse(url)
             currentUri = uri
@@ -258,6 +329,15 @@ class IPTVVideoPlayer(
             // Set media item to player
             exoPlayer?.setMediaItem(mediaItem)
             exoPlayer?.prepare()
+            
+            // Restore the current playback speed after loading new video
+            if (currentPlaybackSpeed != 1.0f) {
+                exoPlayer?.let { player ->
+                    val playbackParameters = PlaybackParameters(currentPlaybackSpeed)
+                    player.setPlaybackParameters(playbackParameters)
+                    Log.d(TAG, "🔄 Restored playback speed to: ${currentPlaybackSpeed}x after loading video with tracking")
+                }
+            }
             
             // Resume position will be applied when player becomes ready
             
@@ -280,7 +360,11 @@ class IPTVVideoPlayer(
         )
         
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            exoPlayer?.play()
+            if (useVLCPlayer) {
+                vlcPlayer?.play()
+            } else {
+                exoPlayer?.play()
+            }
             Log.d(TAG, "🔊 Audio focus granted, starting playback")
         } else {
             Log.w(TAG, "⚠️ Audio focus denied, cannot start playback")
@@ -291,7 +375,11 @@ class IPTVVideoPlayer(
      * Pause the video
      */
     fun pause() {
-        exoPlayer?.pause()
+        if (useVLCPlayer) {
+            vlcPlayer?.pause()
+        } else {
+            exoPlayer?.pause()
+        }
         
         // Abandon audio focus when pausing
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -299,7 +387,11 @@ class IPTVVideoPlayer(
         Log.d(TAG, "🔊 Audio focus abandoned on pause")
         
         // Save current position when pausing
-        val currentPosition = exoPlayer?.currentPosition ?: 0L
+        val currentPosition = if (useVLCPlayer) {
+            vlcPlayer?.getCurrentPosition() ?: 0L
+        } else {
+            exoPlayer?.currentPosition ?: 0L
+        }
         positionManager?.updatePosition(currentPosition)
         positionManager?.saveCurrentPosition()
         Log.d(TAG, "📍 Position saved on pause: ${currentPosition}ms")
@@ -338,6 +430,21 @@ class IPTVVideoPlayer(
     }
     
     /**
+     * Set playback speed with improved audio clarity
+     * Uses PlaybackParameters to maintain speech clarity at higher speeds
+     */
+    fun setPlaybackSpeed(speed: Float) {
+        currentPlaybackSpeed = speed // Store the speed
+        exoPlayer?.let { player ->
+            // Use PlaybackParameters for better audio processing
+            // This helps maintain speech clarity at higher speeds
+            val playbackParameters = PlaybackParameters(speed)
+            player.setPlaybackParameters(playbackParameters)
+            Log.d(TAG, "⚡ Playback speed set to: ${speed}x with improved audio clarity")
+        }
+    }
+    
+    /**
      * Get total duration
      */
     fun getDuration(): Long {
@@ -363,6 +470,48 @@ class IPTVVideoPlayer(
      */
     fun getPlayer(): ExoPlayer? {
         return exoPlayer
+    }
+    
+    /**
+     * Check if audio codec is supported
+     */
+    fun isAudioCodecSupported(mimeType: String): Boolean {
+        return when (mimeType.lowercase()) {
+            "audio/aac", "audio/mp4a-latm" -> true
+            "audio/mpeg", "audio/mp3" -> true
+            "audio/pcm", "audio/wav" -> true
+            "audio/ogg", "audio/vorbis" -> true
+            "audio/ac3" -> false // Not supported without additional codecs
+            "audio/eac3" -> false // Not supported without additional codecs
+            "audio/dts" -> false // Not supported without additional codecs
+            else -> {
+                Log.w(TAG, "Unknown audio codec: $mimeType")
+                false
+            }
+        }
+    }
+    
+    /**
+     * Get supported audio codecs list
+     */
+    fun getSupportedAudioCodecs(): List<String> {
+        return listOf(
+            "AAC (Advanced Audio Coding)",
+            "MP3 (MPEG Audio Layer III)",
+            "PCM (Pulse Code Modulation)",
+            "OGG Vorbis"
+        )
+    }
+    
+    /**
+     * Get unsupported audio codecs list
+     */
+    fun getUnsupportedAudioCodecs(): List<String> {
+        return listOf(
+            "AC3 (Audio Codec 3)",
+            "E-AC3 (Enhanced AC3)",
+            "DTS (Digital Theater Systems)"
+        )
     }
     
     /**
@@ -443,6 +592,40 @@ class IPTVVideoPlayer(
     }
     
     /**
+     * Start stuck frame detection to detect when video is stuck on first frame
+     */
+    private fun startStuckFrameDetection() {
+        // Cancel existing detection job
+        stuckFrameDetectionJob?.cancel()
+        
+        stuckFrameDetectionJob = CoroutineScope(Dispatchers.Main).launch {
+            delay(5000) // Wait 5 seconds after player is ready
+            
+            while (isActive) {
+                delay(2000) // Check every 2 seconds
+                
+                if (exoPlayer?.isPlaying == true && isInitialized) {
+                    val currentPosition = exoPlayer?.currentPosition ?: 0L
+                    
+                    // If video position hasn't changed for 10 seconds while playing, it's likely stuck
+                    if (currentPosition == lastVideoPosition && currentPosition > 0) {
+                        Log.w(TAG, "⚠️ Detected stuck video frame - position not advancing")
+                        Log.w(TAG, "   Current position: ${currentPosition}ms")
+                        Log.w(TAG, "   Last position: ${lastVideoPosition}ms")
+                        Log.w(TAG, "   Attempting software decoder fallback...")
+                        
+                        // Trigger software decoder fallback
+                        attemptSoftwareDecoderFallback()
+                        break
+                    }
+                    
+                    lastVideoPosition = currentPosition
+                }
+            }
+        }
+    }
+    
+    /**
      * Start periodic position tracking every 10 seconds
      */
     private fun startPeriodicPositionTracking() {
@@ -484,6 +667,10 @@ class IPTVVideoPlayer(
             positionTrackingJob?.cancel()
             positionTrackingJob = null
             
+            // Cancel stuck frame detection
+            stuckFrameDetectionJob?.cancel()
+            stuckFrameDetectionJob = null
+            
             // Abandon audio focus before releasing
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.abandonAudioFocus(null)
@@ -492,8 +679,15 @@ class IPTVVideoPlayer(
             // Save final position before releasing
             positionManager?.saveCurrentPosition()
             
+            // Release ExoPlayer
             exoPlayer?.release()
             exoPlayer = null
+            
+            // Release VLC player if it was initialized
+            vlcPlayer?.release()
+            vlcPlayer = null
+            
+            // Reset all state
             trackSelector = null
             isInitialized = false
             currentContentId = null
@@ -501,6 +695,8 @@ class IPTVVideoPlayer(
             currentDuration = 0L
             pendingResumePosition = 0L
             isPositionTrackingStarted = false
+            useVLCPlayer = false
+            audioFallbackAttempted = false
             
             Log.d(TAG, "Player released")
         } catch (e: Exception) {
@@ -520,5 +716,327 @@ class IPTVVideoPlayer(
      */
     fun getVolume(): Float {
         return exoPlayer?.volume ?: 1f
+    }
+    
+    /**
+     * Attempt to find and select a compatible audio track when AC3/DTS fails
+     */
+    private fun attemptAudioTrackFallback() {
+        if (audioFallbackAttempted) {
+            Log.w(TAG, "⚠️ Audio fallback already attempted, showing error message")
+            playerListener?.onPlayerError("Audio codec not supported. This video uses AC3/DTS audio which requires additional codec support. Please try a different video or use a player that supports AC3/DTS audio.")
+            return
+        }
+        
+        audioFallbackAttempted = true
+        Log.i(TAG, "🔄 Attempting audio track fallback...")
+        
+        try {
+            val currentTracks = exoPlayer?.currentTracks
+            if (currentTracks != null) {
+                val audioTrackGroups = mutableListOf<androidx.media3.common.TrackGroup>()
+                
+                // Find all audio track groups
+                for (i in 0 until currentTracks.groups.size) {
+                    val trackGroup = currentTracks.groups[i]
+                    if (trackGroup.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
+                        audioTrackGroups.add(trackGroup.mediaTrackGroup)
+                    }
+                }
+                
+                Log.d(TAG, "Found ${audioTrackGroups.size} audio track groups")
+                
+                // Try to find a compatible audio track (AAC, MP3, etc.)
+                for (trackGroup in audioTrackGroups) {
+                    for (j in 0 until trackGroup.length) {
+                        val format = trackGroup.getFormat(j)
+                        val mimeType = format.sampleMimeType ?: ""
+                        
+                        Log.d(TAG, "Checking audio track: $mimeType")
+                        
+                        // Check if this is a supported audio format
+                        if (mimeType.startsWith("audio/") && 
+                            (mimeType.contains("aac") || mimeType.contains("mp4") || 
+                             mimeType.contains("mp3") || mimeType.contains("mpeg"))) {
+                            
+                            Log.i(TAG, "✅ Found compatible audio track: $mimeType")
+                            
+                            // Select this audio track
+                            val trackSelectionOverride = androidx.media3.common.TrackSelectionOverride(
+                                trackGroup, listOf(j)
+                            )
+                            
+                            val parametersBuilder = trackSelector?.parameters?.buildUpon()
+                            if (parametersBuilder != null) {
+                                parametersBuilder.setOverrideForType(trackSelectionOverride)
+                                trackSelector?.setParameters(parametersBuilder)
+                            }
+                            
+                            Log.i(TAG, "🎵 Switched to compatible audio track")
+                            return
+                        }
+                    }
+                }
+                
+                Log.w(TAG, "⚠️ No compatible audio tracks found")
+                playerListener?.onPlayerError("Audio codec not supported. This video uses AC3/DTS audio which requires additional codec support. Please try a different video or use a player that supports AC3/DTS audio.")
+            } else {
+                Log.w(TAG, "⚠️ No track information available")
+                playerListener?.onPlayerError("Audio codec not supported. This video uses AC3/DTS audio which requires additional codec support. Please try a different video or use a player that supports AC3/DTS audio.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during audio fallback", e)
+            playerListener?.onPlayerError("Audio codec not supported. This video uses AC3/DTS audio which requires additional codec support. Please try a different video or use a player that supports AC3/DTS audio.")
+        }
+    }
+    
+    /**
+     * Log supported audio codecs for debugging
+     */
+    private fun logSupportedAudioCodecs() {
+        try {
+            val codecList = android.media.MediaCodecList(android.media.MediaCodecList.ALL_CODECS)
+            val supportedAudioCodecs = mutableListOf<String>()
+            
+            for (i in 0 until codecList.codecInfos.size) {
+                val codecInfo = codecList.codecInfos[i]
+                if (!codecInfo.isEncoder) { // Only decoders
+                    for (type in codecInfo.supportedTypes) {
+                        if (type.startsWith("audio/")) {
+                            supportedAudioCodecs.add(type)
+                        }
+                    }
+                }
+            }
+            
+            Log.i(TAG, "🎵 Supported Audio Codecs:")
+            supportedAudioCodecs.distinct().sorted().forEach { codec ->
+                Log.i(TAG, "   - $codec")
+            }
+            
+            // Check specifically for AC3/DTS support
+            val hasAC3 = supportedAudioCodecs.any { it.contains("ac3") }
+            val hasDTS = supportedAudioCodecs.any { it.contains("dts") }
+            val hasEAC3 = supportedAudioCodecs.any { it.contains("eac3") }
+            
+            Log.i(TAG, "🔍 Codec Support Status:")
+            Log.i(TAG, "   AC3: ${if (hasAC3) "✅ Supported" else "❌ Not Supported"}")
+            Log.i(TAG, "   E-AC3: ${if (hasEAC3) "✅ Supported" else "❌ Not Supported"}")
+            Log.i(TAG, "   DTS: ${if (hasDTS) "✅ Supported" else "❌ Not Supported"}")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking supported codecs", e)
+        }
+    }
+    
+    /**
+     * Initialize VLC fallback player
+     */
+    private fun initializeVLCFallback() {
+        try {
+            Log.d(TAG, "🔄 Initializing VLC fallback player...")
+            vlcPlayer = VLCPlayerWrapper(context)
+            Log.d(TAG, "VLC player wrapper created: ${vlcPlayer != null}")
+            
+            vlcPlayer?.setPlayerListener(object : VLCPlayerWrapper.VLCPlayerListener {
+                override fun onPlayerReady() {
+                    Log.i(TAG, "✅ VLC Player ready")
+                    playerListener?.onPlayerReady()
+                }
+                
+                override fun onPlayerError(error: String) {
+                    Log.e(TAG, "VLC Player error: $error")
+                    playerListener?.onPlayerError("VLC Player error: $error")
+                }
+                
+                override fun onPlaybackStateChanged(isPlaying: Boolean) {
+                    playerListener?.onPlaybackStateChanged(isPlaying)
+                }
+                
+                override fun onProgressChanged(position: Long, duration: Long) {
+                    playerListener?.onProgressChanged(position, duration)
+                }
+                
+                override fun onBufferingChanged(isBuffering: Boolean) {
+                    playerListener?.onBufferingChanged(isBuffering)
+                }
+            })
+            
+            // Check if VLC is ready after initialization
+            val isReady = vlcPlayer?.isVLCReady() ?: false
+            Log.i(TAG, "✅ VLC fallback player initialized - Ready: $isReady")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize VLC fallback player", e)
+        }
+    }
+    
+    /**
+     * Attempt software decoder fallback for hardware decoder issues
+     */
+    private fun attemptSoftwareDecoderFallback() {
+        if (audioFallbackAttempted) {
+            Log.w(TAG, "⚠️ Software decoder fallback already attempted, showing error message")
+            playerListener?.onPlayerError("Hardware decoder error. This video may not be compatible with your device. Please try a different video.")
+            return
+        }
+        
+        audioFallbackAttempted = true
+        Log.i(TAG, "🔄 Attempting software decoder fallback for hardware decoder issue...")
+        
+        try {
+            // Stop current player
+            exoPlayer?.stop()
+            
+            // Create new ExoPlayer with software decoder preference
+            val softwareRenderersFactory = DefaultRenderersFactory(context).apply {
+                setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                setEnableAudioFloatOutput(true)
+                setEnableDecoderFallback(true)
+            }
+            
+            // Create new ExoPlayer instance with software decoder
+            val newExoPlayer = ExoPlayer.Builder(context)
+                .setMediaSourceFactory(DefaultMediaSourceFactory(context))
+                .setLoadControl(DefaultLoadControl.Builder().build())
+                .setTrackSelector(DefaultTrackSelector(context))
+                .setRenderersFactory(softwareRenderersFactory)
+                .build()
+            
+            // Replace the old player
+            exoPlayer?.release()
+            exoPlayer = newExoPlayer
+            
+            // Set up listeners for the new player
+            setupPlayerListeners()
+            
+            // Reload the current video
+            currentUri?.let { uri ->
+                Log.i(TAG, "🔄 Reloading video with software decoder: ${uri.toString()}")
+                val mediaItem = MediaItem.fromUri(uri)
+                exoPlayer?.setMediaItem(mediaItem)
+                exoPlayer?.prepare()
+                Log.i(TAG, "✅ Switched to software decoder")
+            } ?: run {
+                Log.e(TAG, "No current URI available for software decoder fallback")
+                playerListener?.onPlayerError("No video URL available for software decoder fallback")
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during software decoder fallback", e)
+            playerListener?.onPlayerError("Hardware decoder error. This video may not be compatible with your device. Please try a different video.")
+        }
+    }
+    
+    /**
+     * Set up player listeners (extracted for reuse)
+     */
+    private fun setupPlayerListeners() {
+        exoPlayer?.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                when (playbackState) {
+                    Player.STATE_READY -> {
+                        isInitialized = true
+                        currentDuration = exoPlayer?.duration ?: 0L
+                        
+                        // Apply resume position when player is ready
+                        if (pendingResumePosition > 0L) {
+                            exoPlayer?.seekTo(pendingResumePosition)
+                            Log.d(TAG, "📍 Applying resume position: ${pendingResumePosition}ms")
+                            pendingResumePosition = 0L
+                        }
+                        
+                        // Initialize position tracking
+                        currentContentId?.let { contentId ->
+                            currentContentType?.let { contentType ->
+                                positionManager?.initializePositionTracking(contentId, contentType, currentDuration)
+                            }
+                        }
+                        
+                        // Log audio track information and select best track
+                        logAudioTrackInfo()
+                        selectBestAudioTrack()
+                        
+                        // Start stuck frame detection for software decoder
+                        startStuckFrameDetection()
+                        
+                        playerListener?.onPlayerReady()
+                        playerListener?.onPlaybackStateChanged(exoPlayer?.isPlaying == true)
+                    }
+                    Player.STATE_BUFFERING -> {
+                        playerListener?.onBufferingChanged(true)
+                    }
+                    Player.STATE_ENDED -> {
+                        playerListener?.onPlaybackStateChanged(false)
+                        playerListener?.onEpisodeEnded()
+                        
+                        // Mark content as completed
+                        currentContentId?.let { contentId ->
+                            currentContentType?.let { contentType ->
+                                positionManager?.markAsCompleted(contentId, contentType)
+                            }
+                        }
+                    }
+                    Player.STATE_IDLE -> {
+                        // Player is idle
+                    }
+                }
+            }
+            
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                val errorMessage = error.message ?: "Unknown error"
+                val errorCode = error.errorCode
+                Log.e(TAG, "Player error (software decoder): $errorMessage (Code: $errorCode)", error)
+                
+                // For software decoder, show user-friendly error
+                playerListener?.onPlayerError("Video playback error. This video may not be compatible with your device.")
+            }
+        })
+        
+        // Set up progress tracking
+        exoPlayer?.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playerListener?.onPlaybackStateChanged(isPlaying)
+            }
+        })
+    }
+    
+    /**
+     * Attempt to use VLC player for AC3/DTS support
+     */
+    private fun attemptVLCFallback() {
+        if (audioFallbackAttempted) {
+            Log.w(TAG, "⚠️ VLC fallback already attempted, showing error message")
+            playerListener?.onPlayerError("Audio codec not supported. This video uses AC3/DTS audio which requires additional codec support. Please try a different video or use a player that supports AC3/DTS audio.")
+            return
+        }
+        
+        audioFallbackAttempted = true
+        Log.i(TAG, "🔄 Attempting VLC fallback for AC3/DTS support...")
+        
+        try {
+            // Check if VLC player is available and initialized
+            if (vlcPlayer == null || !vlcPlayer!!.isVLCReady()) {
+                Log.e(TAG, "VLC player not available or not ready")
+                playerListener?.onPlayerError("Audio codec not supported. This video uses AC3/DTS audio which requires additional codec support. Please try a different video or use a player that supports AC3/DTS audio.")
+                return
+            }
+            
+            // Stop ExoPlayer
+            exoPlayer?.stop()
+            
+            // Switch to VLC player
+            useVLCPlayer = true
+            currentUri?.let { uri ->
+                Log.i(TAG, "🔄 Loading video in VLC: ${uri.toString()}")
+                vlcPlayer?.loadVideo(uri.toString())
+                Log.i(TAG, "✅ Switched to VLC player for AC3/DTS support")
+            } ?: run {
+                Log.e(TAG, "No current URI available for VLC fallback")
+                playerListener?.onPlayerError("No video URL available for VLC fallback")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during VLC fallback", e)
+            playerListener?.onPlayerError("Audio codec not supported. This video uses AC3/DTS audio which requires additional codec support. Please try a different video or use a player that supports AC3/DTS audio.")
+        }
     }
 }

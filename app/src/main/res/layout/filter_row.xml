@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@color/panel_background"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp">
+
+    <!-- Genre Filter -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginEnd="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Genre"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/genreFilterSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="@drawable/filter_spinner_focused"
+            android:minHeight="36dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </LinearLayout>
+
+    <!-- Year Filter -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginEnd="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Year"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/yearFilterSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="@drawable/filter_spinner_focused"
+            android:minHeight="36dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </LinearLayout>
+
+    <!-- Rating Filter -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginEnd="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rating"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/ratingFilterSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="@drawable/filter_spinner_focused"
+            android:minHeight="36dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </LinearLayout>
+
+    <!-- General Filter -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sort"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/generalFilterSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="@drawable/filter_spinner_focused"
+            android:minHeight="36dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </LinearLayout>
+
+    <!-- Search Field -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Search"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/searchEditText"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="@drawable/filter_spinner_focused"
+            android:textSize="12sp"
+            android:textColor="@color/text_primary"
+            android:hint="Name, actor, director..."
+            android:textColorHint="@color/text_hint"
+            android:paddingHorizontal="8dp"
+            android:singleLine="true"
+            android:imeOptions="actionDone"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </LinearLayout>
+
+    <!-- Clear Filters Button -->
+    <Button
+        android:id="@+id/clearFiltersButton"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_marginStart="8dp"
+        android:text="Clear"
+        android:textSize="12sp"
+        android:background="@drawable/button_clear_focused"
+        android:textColor="@color/text_primary"
+        android:minWidth="60dp"
+        android:paddingHorizontal="12dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+</LinearLayout>

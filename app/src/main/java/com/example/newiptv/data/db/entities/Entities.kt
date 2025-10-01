@@ -83,3 +83,53 @@ data class PlaybackPositionEntity(
     val isCompleted: Boolean = false, // Whether content was completed
     val watchPercentage: Float = 0f // Percentage watched (0.0 to 1.0)
 )
+
+// 🔹 Watch History (Track Recently Watched Content)
+@Entity(tableName = "watch_history")
+data class WatchHistoryEntity(
+    @PrimaryKey val id: String, // Unique ID for history entry
+    val contentId: String, // ID of the content (movie/series/episode)
+    val contentType: String, // "movie", "series", "episode"
+    val title: String, // Display title
+    val cover: String?, // Cover image URL
+    val streamUrl: String?, // Direct stream URL
+    val categoryId: String?, // Category ID for organization
+    val categoryName: String?, // Category name for display
+    val seriesId: String?, // For episodes, the parent series ID
+    val seasonNumber: Int?, // For episodes, the season number
+    val episodeNumber: Int?, // For episodes, the episode number
+    val lastWatched: Long, // Timestamp of last watch
+    val watchDuration: Long, // How long was watched (in milliseconds)
+    val totalDuration: Long, // Total content duration (in milliseconds)
+    val watchPercentage: Float, // Percentage watched (0.0 to 1.0)
+    val isCompleted: Boolean = false, // Whether content was completed
+    val resumePosition: Long = 0L // Position to resume from
+)
+
+// 🔹 Favorite Playlist Entity
+@Entity(tableName = "favorite_playlists")
+data class FavoritePlaylistEntity(
+    @PrimaryKey val id: String, // Unique playlist ID
+    val name: String, // Playlist name
+    val description: String?, // Optional description
+    val createdDate: Long, // When playlist was created
+    val itemCount: Int = 0, // Number of items in playlist
+    val isDefault: Boolean = false // Whether this is a default playlist
+)
+
+// 🔹 Favorite Playlist Item Entity
+@Entity(tableName = "favorite_playlist_items")
+data class FavoritePlaylistItemEntity(
+    @PrimaryKey val id: String, // Unique item ID
+    val playlistId: String, // ID of the playlist this item belongs to
+    val contentId: String, // ID of the content (movie/series/episode)
+    val contentType: String, // "movie", "series", "episode"
+    val title: String, // Display title
+    val cover: String?, // Cover image URL
+    val streamUrl: String?, // Direct stream URL
+    val seriesId: String?, // For episodes, the parent series ID
+    val seasonNumber: Int?, // For episodes, the season number
+    val episodeNumber: Int?, // For episodes, the episode number
+    val addedDate: Long, // When this item was added to playlist
+    val sortOrder: Int = 0 // For custom ordering within playlist
+)

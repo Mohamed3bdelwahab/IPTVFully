@@ -19,12 +19,20 @@ import com.example.newiptv.data.db.DatabaseProvider
 import com.example.newiptv.data.db.entities.CategoryEntity
 import com.example.newiptv.data.db.entities.ItemEntity
 import com.example.newiptv.data.repository.TvRepository
+import com.example.newiptv.data.repository.WatchHistoryRepository
 import com.example.newiptv.ui.seriesinfo.SeriesInfoScreen
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Job
 import com.example.newiptv.ui.series.SeriesAdapter
 import com.example.newiptv.ui.series.CategoryAdapter
+import com.example.newiptv.ui.filter.FilterManager
+import com.example.newiptv.ui.filter.FilterTVRemoteHandler
 import com.example.newiptv.utils.KeyEventLogger
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
 
 class SeriesScreen : AppCompatActivity() {
 
@@ -37,31 +45,28 @@ class SeriesScreen : AppCompatActivity() {
     private lateinit var seriesAdapter: SeriesAdapter
     private lateinit var loadingText: TextView
     private lateinit var errorText: TextView
-    private lateinit var filterSpinner: Spinner
+    
+    // New filter system
+    private lateinit var filterManager: FilterManager
+    private lateinit var filterTVRemoteHandler: FilterTVRemoteHandler
+    private lateinit var genreFilterSpinner: Spinner
+    private lateinit var yearFilterSpinner: Spinner
+    private lateinit var ratingFilterSpinner: Spinner
+    private lateinit var generalFilterSpinner: Spinner
+    private lateinit var searchEditText: EditText
+    private lateinit var clearFiltersButton: Button
+    private lateinit var filterRow: LinearLayout
 
     private var selectedCategoryIndex = 0
     private var selectedSeriesIndex = 0
     private var isInCategoryPanel = true
-    
-    // Filter options
-    private val filterOptions = listOf(
-        "Default",
-        "A-Z",
-        "Z-A", 
-        "Latest",
-        "Oldest",
-        "Rating (High to Low)",
-        "Rating (Low to High)",
-        "Rating String (High to Low)",
-        "Rating String (Low to High)",
-        "Year (Newest)",
-        "Year (Oldest)"
-    )
     private var currentFocusIndex = 0
 
     private lateinit var repository: TvRepository
+    private lateinit var watchHistoryRepository: WatchHistoryRepository
     private var categories: List<CategoryEntity> = emptyList()
     private var currentSeries: List<ItemEntity> = emptyList()
+    private var allSeries: List<ItemEntity> = emptyList() // Store all series for filtering
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,10 +84,16 @@ class SeriesScreen : AppCompatActivity() {
 
         val database = DatabaseProvider.getDatabase(this)
         repository = TvRepository(database)
+        watchHistoryRepository = WatchHistoryRepository(database)
+        
+        // Initialize filter manager
+        filterManager = FilterManager(this)
 
         initializeViews()
         setupCategoryList()
         setupSeriesGrid()
+        setupFilterSystem()
+        setupSearch()
         setupTVRemoteNavigation()
         
         // Log drawable resources for debugging
@@ -96,7 +107,16 @@ class SeriesScreen : AppCompatActivity() {
         seriesRecyclerView = findViewById(R.id.seriesRecyclerView)
         loadingText = findViewById(R.id.loadingText)
         errorText = findViewById(R.id.errorText)
-        filterSpinner = findViewById(R.id.filterSpinner)
+        searchEditText = findViewById(R.id.searchEditText)
+        
+        // Initialize filter views
+        filterRow = findViewById(R.id.filterRow)
+        genreFilterSpinner = findViewById(R.id.genreFilterSpinner)
+        yearFilterSpinner = findViewById(R.id.yearFilterSpinner)
+        ratingFilterSpinner = findViewById(R.id.ratingFilterSpinner)
+        generalFilterSpinner = findViewById(R.id.generalFilterSpinner)
+        searchEditText = findViewById(R.id.searchEditText)
+        clearFiltersButton = findViewById(R.id.clearFiltersButton)
         
         // Update titles based on content type
         findViewById<TextView>(R.id.contentTitleText).text = screenTitle
@@ -107,9 +127,6 @@ class SeriesScreen : AppCompatActivity() {
         isInCategoryPanel = true
         selectedCategoryIndex = 0
         selectedSeriesIndex = 0
-        
-        // Setup filter spinner
-        setupFilterSpinner()
         
         // Add focus change listener to category list
         categoryListView.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
@@ -124,18 +141,53 @@ class SeriesScreen : AppCompatActivity() {
         KeyEventLogger.logFocusChange("SeriesScreen", "Category", selectedCategoryIndex)
     }
     
-    private fun setupFilterSpinner() {
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, filterOptions)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        filterSpinner.adapter = adapter
+    private fun setupFilterSystem() {
+        // Setup filter spinners with the filter manager
+        filterManager.setupFilterSpinners(
+            genreFilterSpinner,
+            yearFilterSpinner,
+            ratingFilterSpinner,
+            generalFilterSpinner
+        )
         
-        filterSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
-                applyFilter(filterOptions[position])
+        // Setup search field with debounce to prevent too many filter updates
+        var searchJob: kotlinx.coroutines.Job? = null
+        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                // Cancel previous search job
+                searchJob?.cancel()
+                
+                // Start new search job with debounce
+                searchJob = lifecycleScope.launch {
+                    kotlinx.coroutines.delay(300) // 300ms debounce
+                    filterManager.updateSearchQuery(s?.toString() ?: "")
+                }
             }
-            
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
-                // Do nothing
+        })
+        
+        // Setup clear filters button
+        clearFiltersButton.setOnClickListener {
+            filterManager.clearAllFilters()
+            searchEditText.setText("")
+            applyFilters()
+        }
+        
+        // Initialize filter TV remote handler
+        filterTVRemoteHandler = FilterTVRemoteHandler(
+            genreFilterSpinner,
+            yearFilterSpinner,
+            ratingFilterSpinner,
+            generalFilterSpinner,
+            searchEditText,
+            clearFiltersButton
+        )
+        
+        // Observe filter state changes
+        lifecycleScope.launch {
+            filterManager.filterState.collect { filterState ->
+                applyFilters()
             }
         }
     }
@@ -191,32 +243,23 @@ class SeriesScreen : AppCompatActivity() {
 
     }
     
-    private fun applyFilter(filterType: String) {
-        val currentSeries = seriesAdapter.getSeriesList().toMutableList()
-        val sortedSeries = when (filterType) {
-            "A-Z" -> currentSeries.sortedBy { it.name }
-            "Z-A" -> currentSeries.sortedByDescending { it.name }
-            "Latest" -> currentSeries.sortedByDescending { it.lastModified }
-            "Oldest" -> currentSeries.sortedBy { it.lastModified }
-            "Rating (High to Low)" -> currentSeries.sortedByDescending { it.rating5Based ?: 0.0 }
-            "Rating (Low to High)" -> currentSeries.sortedBy { it.rating5Based ?: 0.0 }
-            "Rating String (High to Low)" -> currentSeries.sortedByDescending { 
-                it.rating?.toDoubleOrNull() ?: 0.0 
+    private fun applyFilters() {
+        if (allSeries.isNotEmpty()) {
+            // Run filtering on background thread to avoid blocking UI
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                try {
+                    val filteredSeries = filterManager.applyFilters(allSeries)
+                    
+                    // Update UI on main thread
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        seriesAdapter.updateSeries(filteredSeries)
+                        android.util.Log.d("SeriesScreen", "Applied filters: ${filterManager.getFilterSummary()}, showing ${filteredSeries.size} series")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SeriesScreen", "Error applying filters", e)
+                }
             }
-            "Rating String (Low to High)" -> currentSeries.sortedBy { 
-                it.rating?.toDoubleOrNull() ?: 0.0 
-            }
-            "Year (Newest)" -> currentSeries.sortedByDescending { 
-                it.releaseDate?.split("-")?.firstOrNull()?.toIntOrNull() ?: 0 
-            }
-            "Year (Oldest)" -> currentSeries.sortedBy { 
-                it.releaseDate?.split("-")?.firstOrNull()?.toIntOrNull() ?: 0 
-            }
-            else -> currentSeries // Default - no sorting
         }
-        
-        seriesAdapter.updateSeries(sortedSeries)
-        KeyEventLogger.logScreenEvent("SeriesScreen", "Applied filter: $filterType")
     }
 
     private fun setupSeriesGrid() {
@@ -241,6 +284,87 @@ class SeriesScreen : AppCompatActivity() {
             if (hasFocus) {
                 isInCategoryPanel = false
                 KeyEventLogger.logFocusChange("SeriesScreen", "Series", selectedSeriesIndex)
+            }
+        }
+    }
+
+    private fun setupSearch() {
+        // Debounced search to prevent keyboard issues
+        var searchJob: kotlinx.coroutines.Job? = null
+        
+        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val query = s?.toString()?.trim() ?: ""
+                
+                // Cancel previous search job
+                searchJob?.cancel()
+                
+                if (query.length >= 2) {
+                    // Start searching after 2 characters with delay to prevent keyboard issues
+                    searchJob = lifecycleScope.launch {
+                        kotlinx.coroutines.delay(300) // 300ms delay
+                        if (query == searchEditText.text.toString().trim()) {
+                            performSearch(query)
+                        }
+                    }
+                } else if (query.isEmpty()) {
+                    // Clear search and show current category
+                    if (categories.isNotEmpty()) {
+                        loadSeriesForCategory(categories[selectedCategoryIndex].categoryId)
+                    }
+                }
+            }
+        })
+    }
+
+    private fun performSearch(query: String) {
+        lifecycleScope.launch {
+            try {
+                repository.searchContentByType(contentType, query).collectLatest { results ->
+                    allSeries = results
+                    filterManager.updateFilterOptions(results)
+                    filterManager.refreshSpinnerAdapters(
+                        genreFilterSpinner,
+                        yearFilterSpinner,
+                        ratingFilterSpinner,
+                        generalFilterSpinner
+                    )
+                    applyFilters()
+                    selectedSeriesIndex = 0
+                    updateSeriesFocus()
+                    
+                    android.util.Log.d("SeriesScreen", "🔍 Search results: ${results.size} ${contentType}")
+                    
+                    // Log first few results for debugging
+                    results.take(3).forEach { item ->
+                        android.util.Log.d("SeriesScreen", "   Result: ${item.name} - ID: ${item.itemId}")
+                    }
+                    
+                    if (results.isEmpty()) {
+                        // Log some sample data to help debug
+                        logSampleData()
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SeriesScreen", "❌ Search failed", e)
+            }
+        }
+    }
+    
+    private fun logSampleData() {
+        lifecycleScope.launch {
+            try {
+                val database = DatabaseProvider.getDatabase(this@SeriesScreen)
+                val sampleItems = database.itemDao().getAllItemsByTypeSync(contentType).take(5)
+                
+                android.util.Log.d("SeriesScreen", "🔍 Sample ${contentType} in Database:")
+                sampleItems.forEach { item ->
+                    android.util.Log.d("SeriesScreen", "   ${contentType.replaceFirstChar { it.uppercase() }}: '${item.name}' - ID: ${item.itemId}")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SeriesScreen", "❌ Failed to log sample data", e)
             }
         }
     }
@@ -272,6 +396,39 @@ class SeriesScreen : AppCompatActivity() {
         
         KeyEventLogger.logKeyEvent("SeriesScreen", event, additionalInfo)
         
+        // Check if search field has focus
+        if (searchEditText.hasFocus()) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        // Move to filter UI
+                        filterTVRemoteHandler.setFocusToElement(0)
+                        android.util.Log.d("SeriesScreen", "DPAD_DOWN from search: Moved to filter UI")
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        // Move to category list
+                        categoryListView.requestFocus()
+                        android.util.Log.d("SeriesScreen", "DPAD_LEFT from search: Moved to category list")
+                        return true
+                    }
+                }
+            }
+            return super.dispatchKeyEvent(event)
+        }
+        
+        // Check if filter UI has focus first
+        if (filterTVRemoteHandler.hasFilterFocus()) {
+            if (filterTVRemoteHandler.handleKeyEvent(event)) {
+                return true
+            }
+            // If filter focus was cleared, move back to category list
+            if (!filterTVRemoteHandler.hasFilterFocus() && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                categoryListView.requestFocus()
+                return true
+            }
+        }
+        
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
@@ -297,7 +454,14 @@ class SeriesScreen : AppCompatActivity() {
                                         KeyEvent.KEYCODE_DPAD_UP -> {
                             KeyEventLogger.logNavigation("SeriesScreen", "UP", if (isInCategoryPanel) "Category" else "Series")
                             if (isInCategoryPanel) {
-                                navigateCategoryUp()
+                                // If at top of category list, move to search field first, then filter UI
+                                if (selectedCategoryIndex == 0) {
+                                    searchEditText.requestFocus()
+                                    android.util.Log.d("SeriesScreen", "DPAD_UP: Moved to search field")
+                                    return true
+                                } else {
+                                    navigateCategoryUp()
+                                }
                             } else {
                                 navigateSeriesUp()
                             }
@@ -470,13 +634,44 @@ class SeriesScreen : AppCompatActivity() {
             repository.loadCategoriesWithSync(contentType).collectLatest { result ->
                 result.fold(
                     onSuccess = { categoryList ->
-                        categories = categoryList
-                        val categoryAdapter = CategoryAdapter(this@SeriesScreen, categoryList)
+                        // Add "All" category at the beginning with total count
+                        val totalCount = repository.getTotalItemCountByType(contentType)
+                        val allCategory = CategoryEntity(
+                            categoryId = "all",
+                            categoryName = "All",
+                            parentId = -1,
+                            type = contentType
+                        )
+                        
+                        // Add "Recent Watched" category
+                        val recentWatchedCategory = CategoryEntity(
+                            categoryId = "recent_watched",
+                            categoryName = "Recent Watched",
+                            parentId = -1,
+                            type = contentType
+                        )
+                        
+                        // Keep original category names without counts
+                        val categoriesWithCounts = categoryList
+                        
+                        categories = listOf(allCategory, recentWatchedCategory) + categoriesWithCounts
+                        val categoryAdapter = CategoryAdapter(this@SeriesScreen, categories)
                         categoryListView.adapter = categoryAdapter
+                        
+                        // Set counts for each category
+                        categoryAdapter.updateCategoryCount(0, totalCount) // "All" category
+                        categoryAdapter.updateCategoryCount(1, 0) // "Recent Watched" category (will be updated when loaded)
+                        
+                        // Set counts for regular categories
+                        categoryList.forEachIndexed { index, category ->
+                            val count = repository.getItemCountByCategory(category.categoryId, contentType)
+                            categoryAdapter.updateCategoryCount(index + 2, count) // +2 because of "All" and "Recent Watched"
+                        }
+                        
                         loadingText.visibility = View.GONE
 
-                        if (categoryList.isNotEmpty()) {
-                            loadSeriesForCategory(categoryList[0].categoryId)
+                        if (categories.isNotEmpty()) {
+                            loadSeriesForCategory(categories[0].categoryId)
                         }
                     },
                     onFailure = { exception ->
@@ -498,36 +693,126 @@ class SeriesScreen : AppCompatActivity() {
         android.util.Log.d("SeriesScreen", "Selected Category Index: $selectedCategoryIndex")
 
         lifecycleScope.launch {
-            repository.loadItemsWithSync(contentType, categoryId).collectLatest { result ->
-                result.fold(
-                    onSuccess = { seriesList ->
-                        currentSeries = seriesList
-                        android.util.Log.d("SeriesScreen", "=== ${screenTitle.uppercase()} LOADED SUCCESSFULLY ===")
-                        android.util.Log.d("SeriesScreen", "Category ID: $categoryId")
-                        android.util.Log.d("SeriesScreen", "Total ${screenTitle} Loaded: ${seriesList.size}")
-                        
-                        // Log first few items to see their data
-                        seriesList.take(3).forEach { item ->
-                            android.util.Log.d("SeriesScreen", "${screenTitle.capitalize()}: ${item.name}, ID: ${item.itemId}, Category: ${item.categoryId}")
-                        }
-                        
-                        seriesAdapter.updateSeries(seriesList)
-                        selectedSeriesIndex = 0
-                        loadingText.visibility = View.GONE
-                        
-                        // Update category count for current category
-                        updateCategoryCount(selectedCategoryIndex, seriesList.size)
-                    },
-                    onFailure = { exception ->
-                        loadingText.visibility = View.GONE
-                        errorText.text = "Failed to load ${contentType}: ${exception.message}"
-                        errorText.visibility = View.VISIBLE
-                        android.util.Log.e("SeriesScreen", "=== FAILED TO LOAD ${screenTitle.uppercase()} ===")
-                        android.util.Log.e("SeriesScreen", "Category ID: $categoryId")
-                        android.util.Log.e("SeriesScreen", "Error: ${exception.message}")
-                        exception.printStackTrace()
+            if (categoryId == "all") {
+                // Load ALL series/movies
+                try {
+                    val database = DatabaseProvider.getDatabase(this@SeriesScreen)
+                    val allItems = database.itemDao().getAllItemsByTypeSync(contentType)
+                    
+                    allSeries = allItems
+                    android.util.Log.d("SeriesScreen", "=== ALL ${screenTitle.uppercase()} LOADED FROM DATABASE ===")
+                    android.util.Log.d("SeriesScreen", "Total ${screenTitle} Loaded: ${allItems.size}")
+                    
+                    // Log first few items to see their data
+                    allItems.take(3).forEach { item ->
+                        android.util.Log.d("SeriesScreen", "${screenTitle.replaceFirstChar { it.uppercase() }}: ${item.name}, ID: ${item.itemId}")
                     }
-                )
+                    
+                    // Update filter options with dynamic data from database
+                    filterManager.updateFilterOptions(allItems)
+                    filterManager.refreshSpinnerAdapters(
+                        genreFilterSpinner,
+                        yearFilterSpinner,
+                        ratingFilterSpinner,
+                        generalFilterSpinner
+                    )
+                    
+                    // Apply filters to the loaded series
+                    applyFilters()
+                    selectedSeriesIndex = 0
+                    loadingText.visibility = View.GONE
+                    
+                } catch (exception: Exception) {
+                    loadingText.visibility = View.GONE
+                    errorText.text = "Failed to load all ${contentType}: ${exception.message}"
+                    errorText.visibility = View.VISIBLE
+                    android.util.Log.e("SeriesScreen", "=== FAILED TO LOAD ALL ${screenTitle.uppercase()} ===")
+                    android.util.Log.e("SeriesScreen", "Error: ${exception.message}")
+                    exception.printStackTrace()
+                }
+            } else if (categoryId == "recent_watched") {
+                // Load recent watched content
+                try {
+                    val recentHistory = watchHistoryRepository.getRecentHistoryByType(contentType, 20)
+                    val seriesList = recentHistory.map { history ->
+                        watchHistoryRepository.convertToItemEntity(history)
+                    }
+                    
+                    allSeries = seriesList
+                    android.util.Log.d("SeriesScreen", "=== RECENT WATCHED LOADED SUCCESSFULLY ===")
+                    android.util.Log.d("SeriesScreen", "Total Recent Watched: ${seriesList.size}")
+                    
+                    // Log first few items to see their data
+                    seriesList.take(3).forEach { item ->
+                        android.util.Log.d("SeriesScreen", "Recent Watched: ${item.name}, ID: ${item.itemId}")
+                    }
+                    
+                    // Update filter options with dynamic data from database
+                    filterManager.updateFilterOptions(seriesList)
+                    filterManager.refreshSpinnerAdapters(
+                        genreFilterSpinner,
+                        yearFilterSpinner,
+                        ratingFilterSpinner,
+                        generalFilterSpinner
+                    )
+                    
+                    // Apply filters to the loaded series
+                    applyFilters()
+                    selectedSeriesIndex = 0
+                    loadingText.visibility = View.GONE
+                    
+                    // Update category count for current category
+                    updateCategoryCount(selectedCategoryIndex, seriesList.size)
+                } catch (e: Exception) {
+                    loadingText.visibility = View.GONE
+                    errorText.text = "Failed to load recent watched: ${e.message}"
+                    errorText.visibility = View.VISIBLE
+                    android.util.Log.e("SeriesScreen", "=== FAILED TO LOAD RECENT WATCHED ===")
+                    android.util.Log.e("SeriesScreen", "Error: ${e.message}")
+                    e.printStackTrace()
+                }
+            } else {
+                // Load regular category content from pre-loaded database (NO API CALLS!)
+                try {
+                    val database = DatabaseProvider.getDatabase(this@SeriesScreen)
+                    val seriesList = database.itemDao().getItemsByCategorySync(categoryId, contentType)
+                    
+                    allSeries = seriesList // Store all series for filtering
+                    android.util.Log.d("SeriesScreen", "=== ${screenTitle.uppercase()} LOADED FROM DATABASE ===")
+                    android.util.Log.d("SeriesScreen", "Category ID: $categoryId")
+                    android.util.Log.d("SeriesScreen", "Total ${screenTitle} Loaded: ${seriesList.size}")
+                    
+                    // Log first few items to see their data
+                    seriesList.take(3).forEach { item ->
+                        android.util.Log.d("SeriesScreen", "${screenTitle.replaceFirstChar { it.uppercase() }}: ${item.name}, ID: ${item.itemId}, Category: ${item.categoryId}")
+                    }
+                    
+                    // Update filter options with dynamic data from database
+                    filterManager.updateFilterOptions(seriesList)
+                    filterManager.refreshSpinnerAdapters(
+                        genreFilterSpinner,
+                        yearFilterSpinner,
+                        ratingFilterSpinner,
+                        generalFilterSpinner
+                    )
+                    
+                    // Apply filters to the loaded series
+                    applyFilters()
+                    selectedSeriesIndex = 0
+                    loadingText.visibility = View.GONE
+                    
+                    // Update category count for current category
+                    updateCategoryCount(selectedCategoryIndex, seriesList.size)
+                    
+                } catch (exception: Exception) {
+                    loadingText.visibility = View.GONE
+                    errorText.text = "Failed to load ${contentType}: ${exception.message}"
+                    errorText.visibility = View.VISIBLE
+                    android.util.Log.e("SeriesScreen", "=== FAILED TO LOAD ${screenTitle.uppercase()} ===")
+                    android.util.Log.e("SeriesScreen", "Category ID: $categoryId")
+                    android.util.Log.e("SeriesScreen", "Error: ${exception.message}")
+                    exception.printStackTrace()
+                }
             }
         }
     }

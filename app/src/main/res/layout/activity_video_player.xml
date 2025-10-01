@@ -15,7 +15,8 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:resize_mode="zoom" />
 
     <!-- Loading Progress Bar -->
     <ProgressBar
@@ -167,87 +168,85 @@
             android:progressTint="@android:color/white"
             android:thumb="@drawable/seekbar_thumb" />
 
-        <!-- Control Buttons -->
+        <!-- Control Buttons - All in One Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="horizontal">
 
-            <ImageButton
-                android:id="@+id/btnRewind"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginEnd="16dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Rewind 10 seconds"
-                android:src="@drawable/ic_fast_rewind"
-                android:tint="@android:color/white" />
-
-            <ImageButton
-                android:id="@+id/btnPlayPause"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:background="@drawable/play_button_background"
-                android:contentDescription="Play/Pause"
-                android:src="@drawable/ic_play"
-                android:tint="@android:color/white" />
-
-            <ImageButton
-                android:id="@+id/btnForward"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="16dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Forward 10 seconds"
-                android:src="@drawable/ic_fast_forward"
-                android:tint="@android:color/white" />
-
-        </LinearLayout>
-
-        <!-- Episode Navigation and Menu Buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:gravity="center"
-            android:orientation="horizontal">
-
+            <!-- Previous Episode Button -->
             <ImageButton
                 android:id="@+id/btnPreviousEpisode"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Previous Episode"
                 android:src="@drawable/ic_skip_previous"
                 android:tint="@android:color/white" />
 
+            <!-- Rewind Button -->
+            <ImageButton
+                android:id="@+id/btnRewind"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Rewind 10 seconds"
+                android:src="@drawable/ic_fast_rewind"
+                android:tint="@android:color/white" />
+
+            <!-- Main Play/Pause Button -->
+            <ImageButton
+                android:id="@+id/btnPlayPause"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginHorizontal="16dp"
+                android:background="@drawable/play_button_background"
+                android:contentDescription="Play/Pause"
+                android:src="@drawable/ic_play"
+                android:tint="@android:color/white" />
+
+            <!-- Forward Button -->
+            <ImageButton
+                android:id="@+id/btnForward"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Forward 10 seconds"
+                android:src="@drawable/ic_fast_forward"
+                android:tint="@android:color/white" />
+
+            <!-- Speed Menu Button -->
             <ImageButton
                 android:id="@+id/btnSpeedMenu"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginHorizontal="8dp"
+                android:layout_marginStart="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Playback Speed Menu"
                 android:src="@drawable/ic_speed"
                 android:tint="@android:color/white" />
 
+            <!-- Playlist Menu Button -->
             <ImageButton
                 android:id="@+id/btnPlaylistMenu"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginHorizontal="8dp"
+                android:layout_marginStart="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Episode Playlist Menu"
                 android:src="@drawable/ic_playlist"
                 android:tint="@android:color/white" />
 
+            <!-- Next Episode Button -->
             <ImageButton
                 android:id="@+id/btnNextEpisode"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Next Episode"
                 android:src="@drawable/ic_skip_next"

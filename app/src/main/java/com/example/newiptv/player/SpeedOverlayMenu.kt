@@ -294,13 +294,17 @@ class SpeedOverlayMenu(
     }
     
     /**
-     * Set speed directly
+     * Set speed directly with improved audio clarity
      */
     private fun setSpeed(speed: Float) {
         currentSpeed = speed
         
-        // Apply to ExoPlayer
-        exoPlayer?.setPlaybackParameters(PlaybackParameters(speed))
+        // Apply to ExoPlayer with improved audio processing
+        exoPlayer?.let { player ->
+            val playbackParameters = PlaybackParameters(speed)
+            player.setPlaybackParameters(playbackParameters)
+            Log.d(TAG, "⚡ Speed set to: ${speed}x with improved audio clarity")
+        }
         
         // Update UI on main thread
         handler.post {

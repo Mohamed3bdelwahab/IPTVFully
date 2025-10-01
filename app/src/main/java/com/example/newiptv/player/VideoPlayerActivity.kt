@@ -4,6 +4,7 @@ import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -15,6 +16,9 @@ import androidx.media3.ui.PlayerView
 import com.example.newiptv.R
 import com.example.newiptv.databinding.ActivityVideoPlayerBinding
 import com.example.newiptv.data.db.DatabaseProvider
+import com.example.newiptv.data.repository.WatchHistoryRepository
+import com.example.newiptv.database.AppSettingsDao
+import com.example.newiptv.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,9 +30,23 @@ import java.util.concurrent.TimeUnit
  */
 class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener {
     
+    companion object {
+        private const val TAG = "VideoPlayerActivity"
+        const val EXTRA_VIDEO_URL = "video_url"
+        const val EXTRA_VIDEO_TITLE = "video_title"
+        const val EXTRA_SERIES_ID = "series_id"
+        const val EXTRA_MOVIE_ID = "movie_id"
+        const val EXTRA_SEASON_NUMBER = "season_number"
+        const val EXTRA_EPISODE_INDEX = "episode_index"
+        private const val CONTROLS_HIDE_DELAY = 3000L // 3 seconds
+        private const val PROGRESS_UPDATE_INTERVAL = 1000L // 1 second
+        private const val REQUEST_OVERLAY_PERMISSION = 1001
+    }
+    
     private lateinit var binding: ActivityVideoPlayerBinding
     private lateinit var videoPlayer: IPTVVideoPlayer
     private lateinit var tvRemoteHandler: TVRemoteHandler
+    private lateinit var mxPlayerIntegration: MXPlayerIntegration
     private var speedOverlayMenu: SpeedOverlayMenu? = null
     private var playlistOverlayMenu: PlaylistOverlayMenu? = null
     private var isFullscreen = false
@@ -36,9 +54,15 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private val handler = Handler(Looper.getMainLooper())
     private val hideControlsRunnable = Runnable { hideControls() }
     
+    // MX Player settings
+    private var useMXPlayerAsDefault = true
+    private var mxPlayerLaunched = false
+    
     // Position tracking and auto-play managers
     private lateinit var positionManager: PlaybackPositionManager
     private lateinit var autoPlayManager: AutoPlayManager
+    private lateinit var settingsRepository: SettingsRepository
+    private lateinit var watchHistoryRepository: WatchHistoryRepository
     private var hasResumedFromPosition = false
     
     // Episode navigation data
@@ -47,16 +71,6 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private var currentEpisodeIndex: Int = 0
     private var episodes: List<com.example.newiptv.data.db.entities.EpisodeEntity> = emptyList()
     
-    companion object {
-        const val EXTRA_VIDEO_URL = "video_url"
-        const val EXTRA_VIDEO_TITLE = "video_title"
-        const val EXTRA_SERIES_ID = "series_id"
-        const val EXTRA_SEASON_NUMBER = "season_number"
-        const val EXTRA_EPISODE_INDEX = "episode_index"
-        private const val CONTROLS_HIDE_DELAY = 3000L // 3 seconds
-        private const val PROGRESS_UPDATE_INTERVAL = 1000L // 1 second
-        private const val REQUEST_OVERLAY_PERMISSION = 1001
-    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,7 +98,34 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         positionManager = PlaybackPositionManager(database)
         autoPlayManager = AutoPlayManager()
         
-        // Initialize video player with managers
+        // Initialize settings repository
+        val settingsDao = database.appSettingsDao()
+        settingsRepository = SettingsRepository(settingsDao)
+        watchHistoryRepository = WatchHistoryRepository(database)
+        
+        // Initialize MX Player integration
+        mxPlayerIntegration = MXPlayerIntegration(this, object : MXPlayerIntegration.MXPlayerListener {
+            override fun onMXPlayerLaunchSuccess() {
+                Log.d(TAG, "✅ MX Player launched successfully")
+                mxPlayerLaunched = true
+                // Close this activity since MX Player is handling playback
+            finish()
+            }
+            
+            override fun onMXPlayerLaunchFailed(error: String) {
+                Log.w(TAG, "⚠️ MX Player launch failed: $error")
+                // Fallback to ExoPlayer
+                initializeExoPlayer()
+            }
+            
+            override fun onMXPlayerNotInstalled() {
+                Log.w(TAG, "⚠️ MX Player not installed")
+                // Fallback to ExoPlayer
+                initializeExoPlayer()
+            }
+        })
+        
+        // Initialize video player with managers (ExoPlayer as fallback)
         videoPlayer = IPTVVideoPlayer(this, this, positionManager, autoPlayManager)
         
         // Bind ExoPlayer to PlayerView
@@ -95,6 +136,77 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         // Set player view settings
         binding.playerView.useController = false // We'll use custom controls
         binding.playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        
+        // Load and apply settings
+        loadAndApplySettings()
+    }
+    
+    /**
+     * Initialize ExoPlayer as fallback
+     */
+    private fun initializeExoPlayer() {
+        Log.i(TAG, "🔄 Initializing ExoPlayer as fallback...")
+        
+        // Bind ExoPlayer to PlayerView
+        videoPlayer.getPlayer()?.let { player ->
+            binding.playerView.player = player
+        }
+        
+        // Set player view settings
+        binding.playerView.useController = false // We'll use custom controls
+        binding.playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        
+        // Load and apply settings
+        loadAndApplySettings()
+        
+        Log.i(TAG, "✅ ExoPlayer fallback initialized")
+    }
+    
+    private fun loadAndApplySettings() {
+        lifecycleScope.launch {
+            try {
+                // Initialize default settings if none exist
+                settingsRepository.initializeDefaultSettings()
+                
+                // Load current settings
+                val settings = settingsRepository.getSettingsSync()
+                
+                // Apply default playback speed
+                val defaultSpeed = settings.defaultPlaybackSpeed
+                videoPlayer.setPlaybackSpeed(defaultSpeed)
+                // Sync speed with TV remote handler
+                tvRemoteHandler.setCurrentSpeed(defaultSpeed)
+                android.util.Log.d("VideoPlayerActivity", "🎯 Applied default playback speed: ${defaultSpeed}x")
+                
+                // Apply auto-play next setting
+                autoPlayManager.setAutoPlayEnabled(settings.autoPlayNext)
+                android.util.Log.d("VideoPlayerActivity", "🎯 Auto-play next: ${settings.autoPlayNext}")
+                
+                // Apply remember position setting
+                positionManager.setRememberPositionEnabled(settings.rememberPosition)
+                android.util.Log.d("VideoPlayerActivity", "🎯 Remember position: ${settings.rememberPosition}")
+                
+            } catch (e: Exception) {
+                android.util.Log.e("VideoPlayerActivity", "Failed to load settings", e)
+            }
+        }
+    }
+    
+    private fun savePlaybackSpeed(speed: Float) {
+        lifecycleScope.launch {
+            try {
+                // Check if remember speed is enabled
+                val settings = settingsRepository.getSettingsSync()
+                if (settings.rememberPlaybackSpeed) {
+                    settingsRepository.setDefaultPlaybackSpeed(speed)
+                    android.util.Log.d("VideoPlayerActivity", "💾 Saved playback speed: ${speed}x")
+                } else {
+                    android.util.Log.d("VideoPlayerActivity", "💾 Speed not saved (remember disabled): ${speed}x")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("VideoPlayerActivity", "Failed to save playback speed", e)
+            }
+        }
     }
     
     private fun setupTVRemote() {
@@ -123,7 +235,11 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                 }
             },
             onSpeedChange = { newSpeed ->
-                // Speed change callback - can be implemented for UI updates
+                // Speed change callback - save to settings and update UI
+                android.util.Log.d("VideoPlayerActivity", "⚡ Speed changed to: ${newSpeed}x")
+                // Sync speed with video player
+                videoPlayer.setPlaybackSpeed(newSpeed)
+                savePlaybackSpeed(newSpeed)
                 showControlsTemporarily()
             },
             onNextEpisode = {
@@ -287,39 +403,86 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             // Reset resume flag for new video
             hasResumedFromPosition = false
             
-            // Load episodes first to get the specific episode ID
-            if (seriesId != null) {
-                loadEpisodesForNavigationAndVideo(videoUrl, videoTitle)
+            // Try MX Player first if enabled and available
+            Log.d(TAG, "🔍 MX Player check: useMXPlayerAsDefault=$useMXPlayerAsDefault")
+            val isMXInstalled = mxPlayerIntegration.isMXPlayerInstalled()
+            Log.d(TAG, "🔍 MX Player check: isMXPlayerInstalled=$isMXInstalled")
+            
+            if (useMXPlayerAsDefault && isMXInstalled) {
+                Log.i(TAG, "🚀 Attempting to launch MX Player...")
+                launchMXPlayer(videoUrl, videoTitle)
             } else {
-                // For movies, use video title as content ID
-                val contentType = "movie"
-                val contentId = videoTitle ?: "unknown"
-                
-                // Load resume position before loading video
-                lifecycleScope.launch {
-                    try {
-                        val resumePosition = positionManager?.getSavedPosition(contentId, contentType) ?: 0L
-                        android.util.Log.d("VideoPlayerActivity", "📍 Resume position loaded for movie: ${resumePosition}ms")
-                        
-                        // Load video with position tracking and resume position
-                        videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, resumePosition)
-                        
-                        // Start position tracking
-                        videoPlayer.startPositionTracking()
-                    } catch (e: Exception) {
-                        android.util.Log.e("VideoPlayerActivity", "Failed to load resume position", e)
-                        // Load video without resume position
-                        videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, 0L)
-                        videoPlayer.startPositionTracking()
-                    }
-                }
+                Log.i(TAG, "🔄 Using ExoPlayer (MX Player not available or disabled)")
+                loadVideoWithExoPlayer(videoUrl, videoTitle)
             }
         } else {
-            // Load test video with tracking
-            val testUrl = "http://aws85485.amazonedge.net/series/moh7amed819/150730/172237.mkv"
-            binding.tvTitle.text = "Test Video (MKV)"
-            videoPlayer.loadVideoWithTracking(testUrl, "test_video", "movie", 0L)
-            videoPlayer.startPositionTracking()
+            android.util.Log.e("VideoPlayerActivity", "No video URL provided")
+        }
+    }
+    
+    /**
+     * Launch video in MX Player
+     */
+    private fun launchMXPlayer(videoUrl: String, videoTitle: String?) {
+        // 🔹 Add to watch history BEFORE launching MX Player
+        addToWatchHistory()
+        
+        // Get resume position if available
+        val resumePosition = if (seriesId != null) {
+            // For series, we'll get position after loading episodes
+            0L
+        } else {
+            // For movies, get position immediately
+            val contentId = videoTitle ?: "unknown"
+            // Note: getSavedPosition is a suspend function, so we'll get position in coroutine
+            0L // For now, start from beginning
+        }
+        
+        Log.i(TAG, "🎬 Launching MX Player with resume position: ${resumePosition}ms")
+        
+        val success = mxPlayerIntegration.launchVideo(
+            videoUrl = videoUrl,
+            title = videoTitle,
+            startPosition = resumePosition,
+            decodeMode = MXPlayerIntegration.DECODE_MODE_AUTO
+        )
+        
+        if (!success) {
+            Log.w(TAG, "⚠️ MX Player launch failed, falling back to ExoPlayer")
+            loadVideoWithExoPlayer(videoUrl, videoTitle)
+        }
+    }
+    
+    /**
+     * Load video with ExoPlayer (fallback)
+     */
+    private fun loadVideoWithExoPlayer(videoUrl: String, videoTitle: String?) {
+        // Load episodes first to get the specific episode ID
+        if (seriesId != null) {
+            loadEpisodesForNavigationAndVideo(videoUrl, videoTitle)
+        } else {
+            // For movies, use video title as content ID
+            val contentType = "movie"
+            val contentId = videoTitle ?: "unknown"
+            
+            // Load resume position before loading video
+            lifecycleScope.launch {
+                try {
+                    val resumePosition = positionManager?.getSavedPosition(contentId, contentType) ?: 0L
+                    android.util.Log.d("VideoPlayerActivity", "📍 Resume position loaded for movie: ${resumePosition}ms")
+                    
+                    // Load video with position tracking and resume position
+                    videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, resumePosition)
+                    
+                    // Start position tracking
+                    videoPlayer.startPositionTracking()
+        } catch (e: Exception) {
+                    android.util.Log.e("VideoPlayerActivity", "Failed to load resume position", e)
+                    // Load video without resume position
+                    videoPlayer.loadVideoWithTracking(videoUrl, contentId, contentType, 0L)
+                    videoPlayer.startPositionTracking()
+                }
+            }
         }
     }
     
@@ -519,7 +682,7 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     private fun toggleVolumeControls() {
         if (binding.volumeControls.visibility == View.VISIBLE) {
             binding.volumeControls.visibility = View.GONE
-        } else {
+            } else {
             binding.volumeControls.visibility = View.VISIBLE
             showControlsTemporarily()
         }
@@ -561,6 +724,11 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
                 val progress = ((position * 100) / duration).toInt()
                 binding.seekBar.progress = progress
                 updateTimeDisplay(position, duration)
+                
+                // Update watch history every 30 seconds
+                if (position % 30000 < 1000) { // Every ~30 seconds
+                    updateWatchHistory()
+                }
             }
         }
         
@@ -568,12 +736,99 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         handler.postDelayed({ updateProgress() }, PROGRESS_UPDATE_INTERVAL)
     }
     
+    // Watch History Management
+    private fun addToWatchHistory() {
+        lifecycleScope.launch {
+            try {
+                val videoUrl = intent.getStringExtra(EXTRA_VIDEO_URL) ?: return@launch
+                val videoTitle = intent.getStringExtra(EXTRA_VIDEO_TITLE) ?: "Unknown Title"
+                val contentType = intent.getStringExtra("content_type") ?: "movie"
+                val seriesId = intent.getStringExtra(EXTRA_SERIES_ID)
+                val movieId = intent.getStringExtra(EXTRA_MOVIE_ID)
+                val seasonNumber = intent.getIntExtra(EXTRA_SEASON_NUMBER, 1)
+                val episodeIndex = intent.getIntExtra(EXTRA_EPISODE_INDEX, 0)
+                
+                // Determine content type and ID - use proper DB IDs instead of hash codes
+                val contentId = when (contentType) {
+                    "episode" -> seriesId ?: videoUrl.hashCode().toString()
+                    "series" -> seriesId ?: videoUrl.hashCode().toString()
+                    "movie" -> movieId ?: videoUrl.hashCode().toString()
+                    else -> movieId ?: videoUrl.hashCode().toString()
+                }
+                
+                // Get current position and duration
+                val currentPosition = videoPlayer?.getCurrentPosition() ?: 0L
+                val duration = videoPlayer?.getDuration() ?: 0L
+                val watchPercentage = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+                
+                watchHistoryRepository.addToHistory(
+                    contentId = contentId,
+                    contentType = contentType,
+                    title = videoTitle,
+                    cover = null, // Could be extracted from video metadata
+                    streamUrl = videoUrl,
+                    categoryId = null,
+                    categoryName = null,
+                    seriesId = seriesId,
+                    seasonNumber = if (contentType == "episode") seasonNumber else null,
+                    episodeNumber = if (contentType == "episode") episodeIndex + 1 else null,
+                    watchDuration = currentPosition,
+                    totalDuration = duration,
+                    watchPercentage = watchPercentage,
+                    isCompleted = watchPercentage >= 0.9f, // Consider 90%+ as completed
+                    resumePosition = currentPosition
+                )
+                
+                Log.d(TAG, "✅ Added to watch history: $videoTitle ($contentType)")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to add to watch history", e)
+            }
+        }
+    }
+    
+    private fun updateWatchHistory() {
+        lifecycleScope.launch {
+            try {
+                val videoUrl = intent.getStringExtra(EXTRA_VIDEO_URL) ?: return@launch
+                val contentType = intent.getStringExtra("content_type") ?: "movie"
+                val seriesId = intent.getStringExtra(EXTRA_SERIES_ID)
+                val movieId = intent.getStringExtra(EXTRA_MOVIE_ID)
+                
+                val contentId = when (contentType) {
+                    "episode" -> seriesId ?: videoUrl.hashCode().toString()
+                    "series" -> seriesId ?: videoUrl.hashCode().toString()
+                    "movie" -> movieId ?: videoUrl.hashCode().toString()
+                    else -> movieId ?: videoUrl.hashCode().toString()
+                }
+                
+                val currentPosition = videoPlayer?.getCurrentPosition() ?: 0L
+                val duration = videoPlayer?.getDuration() ?: 0L
+                val watchPercentage = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+                
+                watchHistoryRepository.updateWatchProgress(
+                    contentId = contentId,
+                    contentType = contentType,
+                    watchDuration = currentPosition,
+                    totalDuration = duration,
+                    watchPercentage = watchPercentage,
+                    isCompleted = watchPercentage >= 0.9f,
+                    resumePosition = currentPosition
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to update watch history", e)
+            }
+        }
+    }
+
     // IPTVVideoPlayer.PlayerListener implementations
     override fun onPlayerReady() {
         runOnUiThread {
             binding.btnPlayPause.setImageResource(R.drawable.ic_play)
             binding.progressBar.visibility = View.GONE
             updateProgress()
+            
+            // Add to watch history when player is ready
+            addToWatchHistory()
         }
     }
     
@@ -659,12 +914,19 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     }
     
     override fun onBackPressed() {
-        if (isFullscreen) {
-            toggleFullscreen()
-        } else {
+        // If any overlay menus are open, close them first
+        if (speedOverlayMenu?.isMenuVisible() == true) {
+            speedOverlayMenu?.hide()
+            return
+        }
+        if (playlistOverlayMenu?.isMenuVisible() == true) {
+            playlistOverlayMenu?.hide()
+            return
+        }
+        
+        // Always exit the activity when back is pressed, regardless of fullscreen state
             super.onBackPressed()
         }
-    }
     
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         // Handle TV remote key events
@@ -688,7 +950,44 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
     
     // Immersive Mode and Auto-Hide Methods
     private fun setupImmersiveMode() {
-        // Hide system bars for immersive experience
+        // Set fullscreen flags first
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        )
+        
+        // Set landscape orientation for full screen experience
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        isFullscreen = true
+        
+        // Ensure the content extends to the edges
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        
+        // Use modern immersive mode approach - but only after window is ready
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            // Android 11+ (API 30+) - delay until after onCreate
+            window.decorView.post {
+                try {
+                    window.setDecorFitsSystemWindows(false)
+                    window.insetsController?.let { controller ->
+                        controller.hide(android.view.WindowInsets.Type.systemBars())
+                        controller.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("VideoPlayerActivity", "Error setting up modern immersive mode", e)
+                    // Fallback to legacy method
+                    setupLegacyImmersiveMode()
+                }
+            }
+        } else {
+            // Android 10 and below
+            setupLegacyImmersiveMode()
+        }
+    }
+    
+    private fun setupLegacyImmersiveMode() {
+        @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
@@ -697,20 +996,29 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
             View.SYSTEM_UI_FLAG_FULLSCREEN
         )
-        
-        // Set fullscreen flags
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        )
     }
     
     private fun setupAutoHide() {
         // Auto-hide controls after inactivity
-        binding.root.setOnSystemUiVisibilityChangeListener { visibility ->
-            if (visibility and View.SYSTEM_UI_FLAG_FULLSCREEN == 0) {
-                // System bars are visible, hide them again
-                setupImmersiveMode()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            // Modern approach for Android 11+ - delay until window is ready
+            window.decorView.post {
+                try {
+                    window.insetsController?.let { controller ->
+                        controller.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("VideoPlayerActivity", "Error setting up auto-hide", e)
+                }
+            }
+        } else {
+            // Legacy approach for older Android versions
+            @Suppress("DEPRECATION")
+            binding.root.setOnSystemUiVisibilityChangeListener { visibility ->
+                if (visibility and View.SYSTEM_UI_FLAG_FULLSCREEN == 0) {
+                    // System bars are visible, hide them again
+                    setupLegacyImmersiveMode()
+                }
             }
         }
     }
@@ -932,7 +1240,8 @@ class VideoPlayerActivity : AppCompatActivity(), IPTVVideoPlayer.PlayerListener 
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             // Re-enter immersive mode when window gains focus
-            setupImmersiveMode()
+            // Use legacy method to avoid window initialization issues
+            setupLegacyImmersiveMode()
         }
     }
     

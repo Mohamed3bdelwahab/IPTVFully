@@ -111,7 +111,7 @@ java.lang.IllegalArgumentException: Cannot coerce value to an empty range: maxim
 ### **3. Build & Deploy**
 - **Build**: `./gradlew assembleDebug` ✅
 - **Install**: `./gradlew installDebug` ✅
-- **Launch**: `adb shell am start -n com.example.newiptv/.TestVideoPlayerActivity` ✅
+- **Launch**: `adb shell am start -n com.example.newiptv/` ✅
 
 ### **4. Verification**
 - **Testing**: All seeking controls work without crashes

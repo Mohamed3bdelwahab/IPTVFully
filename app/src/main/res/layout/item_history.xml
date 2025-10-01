@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/historyCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@color/card_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Cover Image -->
+        <ImageView
+            android:id="@+id/historyImage"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:scaleType="centerCrop"
+            android:background="@color/image_background"
+            android:contentDescription="Content cover image" />
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/historyTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Content Title"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:layout_marginTop="8dp" />
+
+        <!-- Content Type -->
+        <TextView
+            android:id="@+id/historyType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🎬 Movie"
+            android:textSize="12sp"
+            android:textColor="@color/accent_color"
+            android:layout_marginTop="4dp" />
+
+        <!-- Progress -->
+        <TextView
+            android:id="@+id/historyProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="75% watched"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="4dp" />
+
+        <!-- Date -->
+        <TextView
+            android:id="@+id/historyDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dec 15, 2024 at 14:30"
+            android:textSize="11sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

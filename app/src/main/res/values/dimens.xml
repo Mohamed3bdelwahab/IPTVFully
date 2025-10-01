@@ -6,4 +6,16 @@
     <dimen name="reflow_text_block_horizontal_gap">8dp</dimen>
     <dimen name="reflow_text_title_size">22sp</dimen>
     <dimen name="reflow_text_description_size">13sp</dimen>
+    
+    <!-- Responsive dimensions for different screen sizes -->
+    <!-- Default (phone) dimensions -->
+    <dimen name="screen_padding">16dp</dimen>
+    <dimen name="title_text_size">24sp</dimen>
+    <dimen name="title_margin_bottom">24dp</dimen>
+    <dimen name="instruction_text_size">12sp</dimen>
+    <dimen name="instruction_margin_top">16dp</dimen>
+    <dimen name="series_title_size">20sp</dimen>
+    <dimen name="series_info_padding">12dp</dimen>
+    <dimen name="episode_item_height">60dp</dimen>
+    <dimen name="episode_text_size">14sp</dimen>
 </resources>

@@ -5,6 +5,9 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.newiptv.data.db.entities.*
+import com.example.newiptv.data.db.FavoritePlaylistDao
+import com.example.newiptv.database.AppSettings
+import com.example.newiptv.database.AppSettingsDao
 
 @Database(
     entities = [
@@ -19,9 +22,16 @@ import com.example.newiptv.data.db.entities.*
         MovieInfoEntity::class,
         MovieStreamDataEntity::class,
         // 🔹 Playback Position Entity
-        PlaybackPositionEntity::class
+        PlaybackPositionEntity::class,
+        // 🔹 Watch History Entity
+        WatchHistoryEntity::class,
+        // 🔹 Favorite Playlist Entities
+        FavoritePlaylistEntity::class,
+        FavoritePlaylistItemEntity::class,
+        // 🔹 App Settings Entity
+        AppSettings::class
     ],
-    version = 7,              // ✅ bumped to v7 for playback position support
+    version = 10,             // ✅ bumped to v10 for favorite playlists support
     exportSchema = false      // ✅ no schema export (simpler for dev)
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,6 +51,15 @@ abstract class AppDatabase : RoomDatabase() {
 
     // 🔹 Playback Position DAO
     abstract fun playbackPositionDao(): PlaybackPositionDao
+    
+    // 🔹 Watch History DAO
+    abstract fun watchHistoryDao(): WatchHistoryDao
+    
+    // 🔹 Favorite Playlist DAO
+    abstract fun favoritePlaylistDao(): FavoritePlaylistDao
+    
+    // 🔹 App Settings DAO
+    abstract fun appSettingsDao(): AppSettingsDao
 
     companion object {
         // 🔹 Migration v1 → v2
@@ -262,6 +281,108 @@ abstract class AppDatabase : RoomDatabase() {
                         lastUpdated INTEGER NOT NULL,
                         isCompleted INTEGER NOT NULL DEFAULT 0,
                         watchPercentage REAL NOT NULL DEFAULT 0.0
+                    )
+                """.trimIndent())
+            }
+        }
+
+        // 🔹 Migration v7 → v8 (Add app settings table)
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create app_settings table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS app_settings (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        username TEXT,
+                        password TEXT,
+                        rememberCredentials INTEGER NOT NULL DEFAULT 0,
+                        autoLogin INTEGER NOT NULL DEFAULT 0,
+                        defaultPlaybackSpeed REAL NOT NULL DEFAULT 1.0,
+                        rememberPlaybackSpeed INTEGER NOT NULL DEFAULT 1,
+                        defaultVideoQuality TEXT NOT NULL DEFAULT 'auto',
+                        autoPlayNext INTEGER NOT NULL DEFAULT 1,
+                        rememberPosition INTEGER NOT NULL DEFAULT 1,
+                        bufferSize INTEGER NOT NULL DEFAULT 100,
+                        theme TEXT NOT NULL DEFAULT 'dark',
+                        primaryColor TEXT NOT NULL DEFAULT '#2196F3',
+                        accentColor TEXT NOT NULL DEFAULT '#FF4081',
+                        fontSize TEXT NOT NULL DEFAULT 'medium',
+                        showSubtitles INTEGER NOT NULL DEFAULT 0,
+                        subtitleSize TEXT NOT NULL DEFAULT 'medium',
+                        language TEXT NOT NULL DEFAULT 'en',
+                        notifications INTEGER NOT NULL DEFAULT 1,
+                        analytics INTEGER NOT NULL DEFAULT 0,
+                        crashReporting INTEGER NOT NULL DEFAULT 1,
+                        autoUpdate INTEGER NOT NULL DEFAULT 1,
+                        debugMode INTEGER NOT NULL DEFAULT 0,
+                        logLevel TEXT NOT NULL DEFAULT 'info',
+                        cacheSize INTEGER NOT NULL DEFAULT 500,
+                        networkTimeout INTEGER NOT NULL DEFAULT 30,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        // 🔹 Migration v8 → v9 (Add watch history table)
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create watch_history table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS watch_history (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        contentId TEXT NOT NULL,
+                        contentType TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        cover TEXT,
+                        streamUrl TEXT,
+                        categoryId TEXT,
+                        categoryName TEXT,
+                        seriesId TEXT,
+                        seasonNumber INTEGER,
+                        episodeNumber INTEGER,
+                        lastWatched INTEGER NOT NULL,
+                        watchDuration INTEGER NOT NULL,
+                        totalDuration INTEGER NOT NULL,
+                        watchPercentage REAL NOT NULL,
+                        isCompleted INTEGER NOT NULL DEFAULT 0,
+                        resumePosition INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+            }
+        }
+
+        // 🔹 Migration v9 → v10 (Add favorite playlist tables)
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create favorite_playlists table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS favorite_playlists (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        createdDate INTEGER NOT NULL,
+                        itemCount INTEGER NOT NULL DEFAULT 0,
+                        isDefault INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                
+                // Create favorite_playlist_items table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS favorite_playlist_items (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        playlistId TEXT NOT NULL,
+                        contentId TEXT NOT NULL,
+                        contentType TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        cover TEXT,
+                        streamUrl TEXT,
+                        seriesId TEXT,
+                        seasonNumber INTEGER,
+                        episodeNumber INTEGER,
+                        addedDate INTEGER NOT NULL,
+                        sortOrder INTEGER NOT NULL DEFAULT 0
                     )
                 """.trimIndent())
             }

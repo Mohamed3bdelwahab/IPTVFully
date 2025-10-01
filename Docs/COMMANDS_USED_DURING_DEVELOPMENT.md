@@ -55,7 +55,7 @@ This document catalogs all the commands used during the playlist fix development
 
 #### **Start App on TV:**
 ```bash
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s 192.168.8.20:5555 shell am start -n com.example.iptvtv/.MainActivity
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s 192.168.8.20:5555 shell am start -n com.example.iptvtv/.HomeScreen
 ```
 **Purpose:** Launches the IPTV app on the connected TV
 **When Used:** After installing new version to test
@@ -190,7 +190,7 @@ search_replace file_path="app/src/main/java/com/example/iptvtv/service/HydraApiS
 1. **Code Changes:** Edit files using `edit_file` or `search_replace`
 2. **Build:** `.\gradlew.bat assembleDebug`
 3. **Install:** `.\gradlew.bat installDebug`
-4. **Start App:** `adb shell am start -n com.example.iptvtv/.MainActivity`
+4. **Start App:** `adb shell am start -n com.example.iptvtv/.HomeScreen`
 5. **Monitor Logs:** `adb logcat -s "PlayerScreen:*" "HydraApiService:*"`
 6. **Test:** Use TV remote or simulate key events
 7. **Repeat:** Based on results
@@ -248,9 +248,9 @@ search_replace file_path="app/src/main/java/com/example/iptvtv/service/HydraApiS
 #### **Device-Specific Commands:**
 ```bash
 # Always specify device when multiple connected
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s 192.168.8.20:5555 shell am start -n com.example.iptvtv/.MainActivity
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s 192.168.8.20:5555 shell am start -n com.example.iptvtv/.HomeScreen
 ```
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s 192.168.8.20:5555 shell am start -n com.example.iptvtv/.MainActivity
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s 192.168.8.20:5555 shell am start -n com.example.iptvtv/.HomeScreen
 
 
 ## 📚 **Command Reference**
@@ -261,7 +261,7 @@ search_replace file_path="app/src/main/java/com/example/iptvtv/service/HydraApiS
 |------|---------|
 | Build App | `.\gradlew.bat assembleDebug` |
 | Install App | `.\gradlew.bat installDebug` |
-| Start App | `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" shell am start -n com.example.iptvtv/.MainActivity` |
+| Start App | `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" shell am start -n com.example.iptvtv/.HomeScreen` |
 | Monitor Logs | `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" logcat -s "PlayerScreen:*" "HydraApiService:*"` |
 | Connect Device | `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" connect 192.168.8.20:5555` |
 | List Devices | `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices` |

@@ -116,7 +116,7 @@ Start-Sleep -Seconds 3
 
 # Step 8: Launch app
 Write-Host "🚀 Step 8: Launching app..." -ForegroundColor Blue
-$launchSuccess = Handle-Interruption "& '$adbPath' -s $deviceIP shell am start -n com.example.newiptv/.MainActivity"
+$launchSuccess = Handle-Interruption "& '$adbPath' -s $deviceIP shell am start -n com.example.newiptv/.HomeScreen"
 
 if (-not $launchSuccess) {
     Write-Host "❌ App launch failed!" -ForegroundColor Red

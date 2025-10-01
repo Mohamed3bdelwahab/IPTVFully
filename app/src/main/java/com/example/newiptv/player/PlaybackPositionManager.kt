@@ -27,6 +27,21 @@ class PlaybackPositionManager(
     private var isPositionSavingEnabled: Boolean = true
     
     /**
+     * Set whether position saving is enabled
+     */
+    fun setRememberPositionEnabled(enabled: Boolean) {
+        this.isPositionSavingEnabled = enabled
+        Log.d(TAG, "⚙️ Remember position ${if (enabled) "enabled" else "disabled"}")
+    }
+    
+    /**
+     * Check if position saving is enabled
+     */
+    fun isRememberPositionEnabled(): Boolean {
+        return isPositionSavingEnabled
+    }
+    
+    /**
      * Initialize position tracking for content
      */
     fun initializePositionTracking(

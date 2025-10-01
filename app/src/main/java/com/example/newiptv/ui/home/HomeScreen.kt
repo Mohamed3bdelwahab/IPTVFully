@@ -13,6 +13,9 @@ import androidx.core.content.ContextCompat
 import com.example.newiptv.R
 import com.example.newiptv.ui.series.SeriesScreen
 import com.example.newiptv.ui.movies.MoviesScreen
+import com.example.newiptv.ui.settings.SettingsActivity
+import com.example.newiptv.ui.search.GlobalSearchScreen
+import com.example.newiptv.player.MXPlayerIntegration
 
 class HomeScreen : AppCompatActivity() {
 
@@ -24,10 +27,12 @@ class HomeScreen : AppCompatActivity() {
     private val menuItems = listOf(
         MenuItem("Series", R.drawable.ic_series, R.color.series_color),
         MenuItem("Movies", R.drawable.ic_movies, R.color.movies_color),
+        MenuItem("Search", R.drawable.ic_search, R.color.accent_color),
         MenuItem("Live TV", R.drawable.ic_live_tv, R.color.live_tv_color),
         MenuItem("Settings", R.drawable.ic_settings, R.color.settings_color),
         MenuItem("History", R.drawable.ic_history, R.color.history_color),
-        MenuItem("Favorites", R.drawable.ic_favorites, R.color.favorites_color)
+        MenuItem("Favorites", R.drawable.ic_favorites, R.color.favorites_color),
+        MenuItem("Test MX Player", R.drawable.ic_series, R.color.series_color) // Test button for MX Player playlist
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,8 +63,10 @@ class HomeScreen : AppCompatActivity() {
             layoutParams = GridLayout.LayoutParams().apply {
                 width = 0
                 height = GridLayout.LayoutParams.WRAP_CONTENT
-                columnSpec = GridLayout.spec(index % 3, 1f)
-                rowSpec = GridLayout.spec(index / 3)
+                // Get column count from resources (responsive)
+                val columnCount = resources.getInteger(R.integer.menu_column_count)
+                columnSpec = GridLayout.spec(index % columnCount, 1f)
+                rowSpec = GridLayout.spec(index / columnCount)
                 setMargins(16, 16, 16, 16)
             }
             radius = 16f
@@ -138,15 +145,17 @@ class HomeScreen : AppCompatActivity() {
     }
 
     private fun navigateUp() {
-        if (selectedCardIndex >= 3) {
-            val newIndex = selectedCardIndex - 3
+        val columnCount = resources.getInteger(R.integer.menu_column_count)
+        if (selectedCardIndex >= columnCount) {
+            val newIndex = selectedCardIndex - columnCount
             menuCards[newIndex].requestFocus()
         }
     }
 
     private fun navigateDown() {
-        if (selectedCardIndex < 3) {
-            val newIndex = selectedCardIndex + 3
+        val columnCount = resources.getInteger(R.integer.menu_column_count)
+        if (selectedCardIndex < columnCount) {
+            val newIndex = selectedCardIndex + columnCount
             if (newIndex < menuItems.size) {
                 menuCards[newIndex].requestFocus()
             }
@@ -154,14 +163,16 @@ class HomeScreen : AppCompatActivity() {
     }
 
     private fun navigateLeft() {
-        if (selectedCardIndex % 3 > 0) {
+        val columnCount = resources.getInteger(R.integer.menu_column_count)
+        if (selectedCardIndex % columnCount > 0) {
             val newIndex = selectedCardIndex - 1
             menuCards[newIndex].requestFocus()
         }
     }
 
     private fun navigateRight() {
-        if (selectedCardIndex % 3 < 2 && selectedCardIndex < menuItems.size - 1) {
+        val columnCount = resources.getInteger(R.integer.menu_column_count)
+        if (selectedCardIndex % columnCount < columnCount - 1 && selectedCardIndex < menuItems.size - 1) {
             val newIndex = selectedCardIndex + 1
             menuCards[newIndex].requestFocus()
         }
@@ -217,21 +228,28 @@ class HomeScreen : AppCompatActivity() {
                 val intent = Intent(this, MoviesScreen::class.java)
                 startActivity(intent)
             }
-            2 -> { // Live TV
+            2 -> { // Search
+                val intent = Intent(this, GlobalSearchScreen::class.java)
+                startActivity(intent)
+            }
+            3 -> { // Live TV
                 // TODO: Implement Live TV screen
                 showComingSoon("Live TV")
             }
-            3 -> { // Settings
-                // TODO: Implement Settings screen
-                showComingSoon("Settings")
+            4 -> { // Settings
+                val intent = Intent(this, SettingsActivity::class.java)
+                startActivity(intent)
             }
-            4 -> { // History
-                // TODO: Implement History screen
-                showComingSoon("History")
+            5 -> { // History
+                val intent = Intent(this, com.example.newiptv.ui.history.HistoryScreen::class.java)
+                startActivity(intent)
             }
-            5 -> { // Favorites
-                // TODO: Implement Favorites screen
-                showComingSoon("Favorites")
+            6 -> { // Favorites
+                val intent = Intent(this, com.example.newiptv.ui.favorites.FavoritesScreen::class.java)
+                startActivity(intent)
+            }
+            7 -> { // Test MX Player
+                testMXPlayerPlaylist()
             }
         }
     }
@@ -240,6 +258,65 @@ class HomeScreen : AppCompatActivity() {
         // Simple toast for now, will be replaced with proper UI
         android.widget.Toast.makeText(this, "$section - Coming Soon!", android.widget.Toast.LENGTH_SHORT).show()
     }
+    
+    private fun testMXPlayerPlaylist() {
+        android.util.Log.d("HomeScreen", "🧪 Testing MX Player playlist with correct data types...")
+        
+        // Test playlist with correct data types (based on working Official API method)
+        val videoUrls = listOf(
+            "http://aws85485.amazonedge.net/series/moh7amed819/150730/497321.mkv",
+            "http://aws85485.amazonedge.net/series/moh7amed819/150730/497322.mkv",
+            "http://aws85485.amazonedge.net/series/moh7amed819/150730/497323.mkv"
+        )
+        val videoNames = listOf("Episode 1", "Episode 2", "Episode 3")
+        
+        val packageName = if (MXPlayerIntegration(this, null).isMXPlayerInstalled()) {
+            try {
+                val packageManager = packageManager
+                val proInfo = packageManager.getPackageInfo("com.mxtech.videoplayer.pro", 0)
+                "com.mxtech.videoplayer.pro"
+            } catch (e: Exception) {
+                "com.mxtech.videoplayer.ad"
+            }
+        } else {
+            "com.mxtech.videoplayer.ad"
+        }
+        
+        // Convert to URIs with correct data types
+        val videoUris = videoUrls.map { android.net.Uri.parse(it) }.toTypedArray()
+        val videoNamesArray = videoNames.toTypedArray()
+        
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            setPackage(packageName)
+            type = "video/*"
+            
+            // Set the first video as the primary data
+            if (videoUris.isNotEmpty()) {
+                setDataAndType(videoUris[0], "video/*")
+            }
+            
+            // Use correct data types to avoid ClassCastException
+            putExtra("video_list", videoUris) // Uri[] instead of ArrayList<Uri>
+            putExtra("video_list.name", videoNamesArray) // String[] instead of ArrayList<String>
+            putExtra("video_list.play_index", 0)
+            putExtra("video_list_is_explicit", true)
+            
+            // Additional parameters with correct data types
+            putExtra("title", "MX Player Test Playlist")
+            putExtra("decode_mode", 0.toByte()) // Byte instead of Integer
+            putExtra("return_result", true)
+            putExtra("secure_uri", true)
+        }
+        
+        try {
+            startActivity(intent)
+            android.widget.Toast.makeText(this, "MX Player launched with playlist!", android.widget.Toast.LENGTH_LONG).show()
+            android.util.Log.d("HomeScreen", "✅ MX Player playlist launched successfully")
+        } catch (e: Exception) {
+            android.util.Log.e("HomeScreen", "❌ Failed to launch MX Player playlist", e)
+            android.widget.Toast.makeText(this, "Failed to launch MX Player playlist: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
 
     data class MenuItem(
         val title: String,
@@ -247,3 +324,4 @@ class HomeScreen : AppCompatActivity() {
         val colorRes: Int
     )
 }
+

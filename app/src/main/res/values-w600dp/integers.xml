@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tablet grid layout -->
+    <integer name="menu_column_count">3</integer>
+    <integer name="menu_row_count">2</integer>
+</resources>
